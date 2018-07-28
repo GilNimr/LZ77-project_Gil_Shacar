@@ -3,6 +3,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+//not working! but on the right way :)
+
 public class LZ77 {
 
 	LZ77() {
