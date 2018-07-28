@@ -29,12 +29,9 @@ public class LZ77 {
 			e1.printStackTrace();
 		}
 
-		System.out.println("(0,0," + (char) byteArray[0] + ") "); // printing
-																	// the first
-																	// coded
-																	// tuple.
+		
 
-		int window = 1; // the sliding window, later will be maximum of 32.
+		int window = 0; // the sliding window, later will be maximum of 32.
 		int Look_A_Head = 8; // the look a head buffer, maximum of 8
 
 		/*
@@ -50,7 +47,7 @@ public class LZ77 {
 
 		int l = 0; // length of characters to copy.
 
-		for (int i = 1; i < byteArray.length; i++) {
+		for (int i = 0; i < byteArray.length; i++) {
 			
 			char c = (char) byteArray[i];
 			window = i;
@@ -88,4 +85,3 @@ public class LZ77 {
 
 	}
 }
-
