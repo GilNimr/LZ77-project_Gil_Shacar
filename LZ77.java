@@ -4,28 +4,38 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+/*
+ * the tuple will be as follows: (d,l,c), d is how far go back to go, l
+ * is how many characters to copy, c is the next character after that.
+ */
+
 public class LZ77 {
-
-	LZ77() {
-
+	int sliding_window; // the sliding_window, later will be maximum of 32
+	int tmp_d; // variable for finding j.
+	int d; // how much going back.
+	int tmp_l; // variable for finding l.
+	int l; // length of characters to copy.
+	int index_of_compressed_content_bytes_to_output_file; // index for appointing bytes to 
+																//compressed_content_bytes_to_output_file variable
+	final int look_a_head_buffer; // the look a head buffer, maximum of 8
+	byte[] content_file_as_bytes; // array  of all the bytes of the file.
+	byte[] compressed_content_bytes_to_output_file; //array  of all the bytes in the output file.
+	char c;
+	
+	LZ77() { 
+		sliding_window = tmp_d = d = tmp_l = l = index_of_compressed_content_bytes_to_output_file = 0;
+		look_a_head_buffer = 8;
 	}
 
 	public void Compress(String input_file_path, String output_file_path) {
 
 		File input_file = new File(input_file_path);
 
-		byte[] content_file_as_bytes = new byte[(int) input_file.length()]; // array
-																			// of
-																			// all
-																			// the
-		// bytes of the
-		// file.
+		content_file_as_bytes = new byte[(int) input_file.length()]; 
 
 		try {
 			FileInputStream fileInputStream = new FileInputStream(input_file);
-			fileInputStream.read(content_file_as_bytes); // reading all the file
-															// into
-			// content_file_as_bytes.
+			fileInputStream.read(content_file_as_bytes); // reading all the file into content_file_as_bytes.
 
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
@@ -35,33 +45,11 @@ public class LZ77 {
 			e1.printStackTrace();
 		}
 
-		byte[] compressed_content_bytes_to_output_file = new byte[(int) input_file
-				.length() * 2];
-		int sliding_window = 0; // the sliding_window, later will be maximum of
-								// 32.
-		int look_a_head_buffer = 8; // the look a head buffer, maximum of 8
-
-		/*
-		 * the tuple will be as follows: (i,l,c), i is how far go back to go, l
-		 * is how many characters to copy, c is the next character after that.
-		 */
-
-		int tmp_d = 0; // variable for finding j.
-
-		int d = 0; // how much going back.
-
-		int tmp_l = 0; // variable for finding l.
-
-		int l = 0; // length of characters to copy.
-
-		int index_of_compressed_content_bytes_to_output_file = 0; // index for
-																	// appointing
-																	// bytes to
-																	// compressed_content_bytes_to_output_file
+		compressed_content_bytes_to_output_file = new byte[(int) input_file.length() * 2];
 
 		for (int j = 0; j < content_file_as_bytes.length; j++) {
 
-			char c = (char) content_file_as_bytes[j];
+			c = (char) content_file_as_bytes[j];
 			sliding_window = j;
 			if (sliding_window > 32)
 				sliding_window = 32;
@@ -115,9 +103,8 @@ public class LZ77 {
 		}
 	}
 
-	void AddTo_compressed_content_bytes_to_output_file(
-			byte[] compressed_content_bytes_to_output_file, int d, int l,
-			int c, int index) {
+	void AddTo_compressed_content_bytes_to_output_file(byte[] compressed_content_bytes_to_output_file, int d, int l,
+														int c, int index) {
 
 		String d_str = Integer.toBinaryString(d);
 		while (d_str.length() < 8) {
