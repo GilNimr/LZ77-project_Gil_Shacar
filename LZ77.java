@@ -29,6 +29,7 @@ public class LZ77 {
 
 	public void Compress(String input_file_path, String output_file_path) {
 
+
 		File input_file = new File(input_file_path);
 
 		content_file_as_bytes = new byte[(int) input_file.length()]; 
@@ -36,6 +37,7 @@ public class LZ77 {
 		try {
 			FileInputStream fileInputStream = new FileInputStream(input_file);
 			fileInputStream.read(content_file_as_bytes); // reading all the file into content_file_as_bytes.
+
 
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
@@ -45,14 +47,17 @@ public class LZ77 {
 			e1.printStackTrace();
 		}
 
+
 		compressed_content_bytes_to_output_file = new byte[(int) input_file.length() * 2];
 
 		for (int j = 0; j < content_file_as_bytes.length; j++) {
+
 
 			c = (char) content_file_as_bytes[j];
 			sliding_window = j;
 			if (sliding_window > 32)
 				sliding_window = 32;
+
 
 			for (int k = 0; k < sliding_window; k++) {
 				tmp_l = 0;
@@ -61,6 +66,7 @@ public class LZ77 {
 
 				while ((content_file_as_bytes[j + step_forward] == content_file_as_bytes[j
 						- tmp_d + step_forward])) {
+
 					tmp_l++;
 					step_forward++;
 					if ((j + step_forward >= content_file_as_bytes.length)
@@ -70,7 +76,9 @@ public class LZ77 {
 
 				if (tmp_l > l) {
 					l = tmp_l;
+
 					d = tmp_d;
+
 					if (j + step_forward + 1 < content_file_as_bytes.length)
 						c = (char) content_file_as_bytes[j + step_forward];
 					else
@@ -80,11 +88,14 @@ public class LZ77 {
 			}
 
 			AddTo_compressed_content_bytes_to_output_file(
+
 					compressed_content_bytes_to_output_file, d, l, c,
+
 					index_of_compressed_content_bytes_to_output_file);
 			index_of_compressed_content_bytes_to_output_file = index_of_compressed_content_bytes_to_output_file + 2;
 			j = j + l;
 			l = 0;
+
 			d = 0;
 
 		}
@@ -125,5 +136,6 @@ public class LZ77 {
 		compressed_content_bytes_to_output_file[index] = d_l_byte;
 		compressed_content_bytes_to_output_file[index + 1] = c_byte;
 	}
+
 
 }
