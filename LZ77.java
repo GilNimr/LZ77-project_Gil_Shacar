@@ -61,8 +61,8 @@ public class LZ77 {
 			use_the_upgrade = false;
 			c = (char) content_file_as_bytes[j];
 			sliding_window = j;
-			if (sliding_window > 32)
-				sliding_window = 32;
+			if (sliding_window > 31)
+				sliding_window = 31;
 
 			for (int k = 0; k < sliding_window; k++) {
 				
