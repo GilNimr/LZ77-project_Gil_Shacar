@@ -28,7 +28,7 @@ public class LZ77 {
 	
 	LZ77() { 
 		sliding_window = tmp_d = d = tmp_l = l = index_of_compressed_content_bytes_to_output_file = 0;
-		look_a_head_buffer = 8;
+		look_a_head_buffer = 7;
 		write_to_upgrade_file = false;
 	}
 	
@@ -174,8 +174,8 @@ public class LZ77 {
 
 			c = (char) content_file_as_bytes[j];
 			sliding_window = j;
-			if (sliding_window > 32)
-				sliding_window = 32;
+			if (sliding_window > 31)
+				sliding_window = 31;
 
 			for (int k = 0; k < sliding_window; k++) {
 				tmp_l = 0;
