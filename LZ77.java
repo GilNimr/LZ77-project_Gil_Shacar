@@ -12,16 +12,16 @@ import org.omg.PortableInterceptor.USER_EXCEPTION;
  */
 
 public class LZ77 {
-	int sliding_window; // the sliding_window, later will be maximum of 32
+	int sliding_window; // the sliding_window, later will be maximum of 31
 	int tmp_d; // variable for finding j.
 	int d; // how much going back.
 	int tmp_l; // variable for finding l.
 	int l; // length of characters to copy.
-	int index_of_compressed_content_bytes_to_output_file; // index for appointing bytes to 
+	int index_of_compressed_content_bytes_to_output_file=0; // index for appointing bytes to 
 	boolean write_to_upgrade_file; // will be true if we use the upgrade
 	
 		//compressed_content_bytes_to_output_file variable
-	final int look_a_head_buffer; // the look a head buffer, maximum of 8
+	final int look_a_head_buffer; // the look a head buffer, maximum of 7
 	byte[] content_file_as_bytes; // array  of all the bytes of the file.
 	byte[] compressed_content_bytes_to_output_file; //array  of all the bytes in the output file.
 	char c;
@@ -271,8 +271,72 @@ public class LZ77 {
 						= c_byte;
 	}
 	
-	
-}
+	public void Decompress(String input_file_path, String output_file_path) {
+		File input_file = new File(input_file_path);
 
+		/*
+		 * Array of all the bytes of the file.
+		 */
+		byte[] compressed_file_as_bytes = new byte[(int) input_file.length()];
+
+		try {
+			FileInputStream fileInputStream = new FileInputStream(input_file);
+			fileInputStream.read(compressed_file_as_bytes); // reading all the
+															// file
+															// into
+															// compressed_file_as_bytes.
+
+		} catch (FileNotFoundException e) {
+			System.out.println("File Not Found.");
+			e.printStackTrace();
+		} catch (IOException e1) {
+			System.out.println("Error Reading The File.");
+			e1.printStackTrace();
+		}
+
+		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file
+				.length() * 500];
+		
+		int index_of_returned_original_bytes = 0;
+		for (int j = 0; j < compressed_file_as_bytes.length; j++) {
+			d = (int) compressed_file_as_bytes[j];
+			d = d << 24;
+			d = d >>> 24;
+			d = d >>> 3;
+			l = (int) compressed_file_as_bytes[j];
+			l = l << 29; // 32-3
+			l = l >>> 29;//32-3
+			System.out.println("i is: "+d+" l is: "+l);
+
+			if (d == 0) {
+				returned_original_bytes_to_output_file[index_of_returned_original_bytes] = compressed_file_as_bytes[j + 1];
+				index_of_returned_original_bytes++;
+			} else {
+				while (l > 0) {
+					returned_original_bytes_to_output_file[index_of_returned_original_bytes] = 
+							returned_original_bytes_to_output_file[index_of_returned_original_bytes- d];
+					index_of_returned_original_bytes++;
+					l--;
+				}
+				returned_original_bytes_to_output_file[index_of_returned_original_bytes] = compressed_file_as_bytes[j + 1];
+				index_of_returned_original_bytes++;
+			}
+			j++;
+		}
+		try {
+			FileOutputStream fileOutputStream = new FileOutputStream(
+					output_file_path);
+			fileOutputStream.write(returned_original_bytes_to_output_file, 0,
+					index_of_returned_original_bytes);
+
+		} catch (FileNotFoundException e) {
+			System.out.println("File Not Found.");
+			e.printStackTrace();
+		} catch (IOException e1) {
+			System.out.println("Error Writing The File.");
+			e1.printStackTrace();
+		}
+	}
+}
 
 
