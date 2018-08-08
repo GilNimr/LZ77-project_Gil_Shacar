@@ -1,3 +1,4 @@
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -244,11 +245,19 @@ public class LZ77 {
 			d = 0;
 
 		}
+		
 		try {
 			FileOutputStream fileOutputStream = new FileOutputStream(
 					output_file_path);
+			DataOutputStream out = new DataOutputStream(fileOutputStream);
+		    out.writeInt(indexes_of_changes.length);
+			for (int i = 0; i < indexes_of_changes.length; i++) {
+				out.writeInt(indexes_of_changes[i]);
+				out.writeByte(letters_to_save[i]);
+			}
+			//long l=fileOutputStream.getChannel().position();
 			fileOutputStream.write(compressed_content_bytes_to_output_file, 0,
-					index_of_compressed_content_bytes_to_output_file - 2);
+					index_of_compressed_content_bytes_to_output_file);
 
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
@@ -350,31 +359,6 @@ public class LZ77 {
 	
 	
 	
-
-	/*
-	void buildLonelyString() {
-		
-		int[] frequency_of_letter = new int[127]; // as ASCI
-		//boolean[] usedLetter = new boolean[127];
-		
-		for (int i=0; i<127; i++) {
-			frequency_of_letter[i] = 0;
-			//usedLetter[i] = false;
-		}
-		
-		for (int i=0; i<content_file_as_bytes.length; i++) {
-			frequency_of_letter[(int) content_file_as_bytes[i]]++;
-		}
-		
-		for (int i=0; i<content_file_as_bytes.length; i++) {
-			if (frequency_of_letter[(int) content_file_as_bytes[i]] == 1) {
-				lonelyLetters += (char) content_file_as_bytes[i];
-			}
-		}
-		System.out.println("-------------------lonelyString: " + lonelyLetters);
-	}
-	
-	*/
 	void AddTo_compressed_content_bytes_to_output_file(byte[] compressed_content_bytes_to_output_file, int d, int l,
 														int c, int index) {
 
@@ -395,94 +379,6 @@ public class LZ77 {
 		
 		System.out.println("-----------(" + d + ", " + l + ", " + (char) c + ")---------------");
 	}
-	
-/*	
-	void addTo_with_upgrade ( byte[] compressed_with_upgrade_content_bytes_to_output_file,int d,int l, char c,
-			int j, int step_read, int index_of_compressed_content_bytes_to_output_file_with_upgrade){
-
-
-		System.out.println("\nIn AddTo with upgrade...\nstep_index= " + step_index_toUpgrade_byte_array + " index_of_compres...: " +
-				index_of_compressed_content_bytes_to_output_file_with_upgrade);
-		
-		int how_many_indexes_to_casting=4, index_of_bit_at_content_text = j+step_read;
-		
-		if (index_of_bit_at_content_text <= 127) {
-			how_many_indexes_to_casting = 1;
-		}
-		else if (index_of_bit_at_content_text <= 32767) {
-			how_many_indexes_to_casting = 2;
-		}
-		else if (index_of_bit_at_content_text <= 8388607) {
-			how_many_indexes_to_casting = 3;
-		}
-		System.out.print(" we'll add " + how_many_indexes_to_casting + " indexes of numberOfBit\n");
-		
-		
-		
-		ByteBuffer b = ByteBuffer.allocate(4);
-		b.putInt(index_of_bit_at_content_text);
-
-		System.out.println("the index of this char is " + index_of_bit_at_content_text + ", the byte is:");
-		byte c_byte = (byte) c;
-		int index=0;
-		for (int i=3; index<how_many_indexes_to_casting; i--) {
-			compressed_with_upgrade_content_bytes_to_output_file[index_of_compressed_content_bytes_to_output_file_with_upgrade+index] 
-					= b.array()[i];
-			index++;
-			System.out.print((index-1) + ": " +b.array()[i] + " , ");
-		}
-
-		compressed_with_upgrade_content_bytes_to_output_file[index_of_compressed_content_bytes_to_output_file_with_upgrade+
-		                                                     how_many_indexes_to_casting] = c_byte;
-		step_index_toUpgrade_byte_array += (how_many_indexes_to_casting+1);
-		System.out.println(" \nstep_index: " + step_index_toUpgrade_byte_array + ", char: " + (char) c + "\nfinish addToWith\n\n");
-		write_to_upgrade_file = true;
-
-		
-		System.out.println("--------(we added: index: " + index_of_bit_at_content_text + " the char " + (char) c + "-------)");
-
-	}
-	
-	
-	void checkCompress(int j, int step_read, int step_copy) {
-		System.out.println("Checking regular compress...");
-		if (content_file_as_bytes[j + step_read] == content_file_as_bytes[j - tmp_d + step_copy]){
-			usual_lz77 = true;
-			upgrade = false;
-		}
-		else {
-			usual_lz77 = false;
-		}
-		System.out.println("\n" + (j+1+step_read) + "'st letter, so now we read: " + (char) content_file_as_bytes[j + step_read]
-				+ ", and we copy " + (char) content_file_as_bytes[j - tmp_d + step_copy] + ", so usual_lzz= "
-				+ (content_file_as_bytes[j + step_read] == content_file_as_bytes[j - tmp_d + step_copy]));
-	}
-
-	
-	void checkCompressWithUpgrade(int j, int step_read, int step_copy){
-		boolean isLetterAtLonelyString = false;
-		
-		System.out.println("Checking upgrade compress...");
-		
-		for (int i=0; i<lonelyLetters.length(); i++) {
-			if (content_file_as_bytes[j + step_read] == lonelyLetters.charAt(i)) {
-				isLetterAtLonelyString = true;
-			}
-		}
-		
-		if ( (content_file_as_bytes[j + step_read+1] == content_file_as_bytes[j - tmp_d + step_copy+1]) &&
-				(isLetterAtLonelyString)) {
-			upgrade = true;
-		}
-		else
-			upgrade=false;
-		
-		System.out.println("After we know that usual_lzz=" +usual_lz77 	+ ",\n we see that the letter after thats letter is " + 
-		(char) content_file_as_bytes[j + step_read+1] + ",\n and because we copy the next letter- " +
-					(char)content_file_as_bytes[j - tmp_d + step_copy+1] + ", and becuase it " + isLetterAtLonelyString + " that "
-							+ "it is in our lonelyString,  so upgrade= " + 	(upgrade) );
-	}
-	*/
 	
 	public void Decompress(String input_file_path, String output_file_path) {
 
@@ -551,6 +447,100 @@ public class LZ77 {
 			e1.printStackTrace();
 		}
 	}
+	public void Decompress_Upgraded(String input_file_path, String output_file_path) {
+
+		File input_file = new File(input_file_path);
+		
+		/*
+		 * Array of all the bytes of the file.
+		 */
+		
+		
+		byte[] size_of_fixing_info = new byte[4];
+		byte[] compressed_file_as_bytes=null;
+		byte[] fixing_info=null;
+		
+		try {
+			FileInputStream fileInputStream = new FileInputStream(input_file);
+			fileInputStream.read(size_of_fixing_info);
+			ByteBuffer wrapped = ByteBuffer.wrap(size_of_fixing_info);
+			int int_size_of_fixing_info = wrapped.getInt();
+			
+			fixing_info = new byte[int_size_of_fixing_info];
+			fileInputStream.read(fixing_info);
+			wrapped.clear();
+			compressed_file_as_bytes = new byte[(int) input_file.length()-int_size_of_fixing_info];
+			fileInputStream.read(compressed_file_as_bytes); // reading all the
+															// file
+															// into
+															// compressed_file_as_bytes.
+		} catch (FileNotFoundException e) {
+			System.out.println("File Not Found.");
+			e.printStackTrace();
+		} catch (IOException e1) {
+			System.out.println("Error Reading The File.");
+			e1.printStackTrace();
+		}
+		
+		
+		
+		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file.length() * 500];
+		
+		int index_of_returned_original_bytes = 0;
+		
+		for (int j = 0; j < compressed_file_as_bytes.length; j++) {
+			d = (int) compressed_file_as_bytes[j];
+			d = d << 24;
+			d = d >>> 24;
+			d = d >>> 3;
+			l = (int) compressed_file_as_bytes[j];
+			l = l << 29; // 32-3
+			l = l >>> 29;//32-3
+			System.out.println("d is: "+d+" l is: "+l);
+
+			if (d == 0) {
+				returned_original_bytes_to_output_file[index_of_returned_original_bytes] = compressed_file_as_bytes[j + 1];
+				index_of_returned_original_bytes++;
+			} else {
+				while (l > 0) {
+					returned_original_bytes_to_output_file[index_of_returned_original_bytes] = 
+							returned_original_bytes_to_output_file[index_of_returned_original_bytes- d];
+					index_of_returned_original_bytes++;
+					l--;
+				}
+				returned_original_bytes_to_output_file[index_of_returned_original_bytes] = compressed_file_as_bytes[j + 1];
+				index_of_returned_original_bytes++;
+			}
+			j++;
+		}
+		byte[] index_of_char_to_fix=new byte[4];
+		for (int i = 0; i <fixing_info.length-4; i=i+5) {
+			index_of_char_to_fix[0]=fixing_info[i];
+			index_of_char_to_fix[1]=fixing_info[i+1];
+			index_of_char_to_fix[2]=fixing_info[i+2];
+			index_of_char_to_fix[3]=fixing_info[i+3];
+			ByteBuffer wrapped = ByteBuffer.wrap(index_of_char_to_fix);
+			int int_index_of_char_to_fix = wrapped.getInt();
+			byte original_byte=fixing_info[i+4];
+			returned_original_bytes_to_output_file[int_index_of_char_to_fix]=original_byte;
+		}
+		try {
+			FileOutputStream fileOutputStream = new FileOutputStream(
+					output_file_path);
+			fileOutputStream.write(returned_original_bytes_to_output_file, 0,
+					index_of_returned_original_bytes);
+			
+			
+
+		} catch (FileNotFoundException e) {
+			System.out.println("File Not Found.");
+			e.printStackTrace();
+		} catch (IOException e1) {
+			System.out.println("Error Writing The File.");
+			e1.printStackTrace();
+		}
+	}
 
 }
+
 	
