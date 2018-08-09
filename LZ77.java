@@ -344,16 +344,10 @@ public class LZ77 {
 												//deleted today save_char_after_twist[i] = temp_save_char_after_switch[i];
 										 }
 									 }
-									  
-									
-									
-								
 								}
-								
 							}
 						}	
 					}
-					
 					
 				} // end while
 
@@ -457,21 +451,23 @@ public class LZ77 {
 			d = 0;
 
 		}
+		
 		try {
 			FileOutputStream fileOutputStream = new FileOutputStream(
 					output_file_path);
 			DataOutputStream out = new DataOutputStream(fileOutputStream);
-			int count =0;
+			
+			/*int count =0;
 			for (int i = 0; i < indexes_of_changes.length; i++) {
-				if ( (i>0) && (indexes_of_changes[i] ==0)) {
+				if ( (i>0) && (indexes_of_changes[i] == 0)) {
 					break;
 				}
 				count++;
-			}
+			}*/
 			
 			
-		    out.writeInt(count);
-			for (int i = 0; i < count; i++) {
+		    out.writeInt(indexesAtFinito*5);
+			for (int i = 0; i < indexesAtFinito; i++) {
 				
 				out.writeInt(indexes_of_changes[i]);
 				out.writeByte(letters_to_save[i]);
