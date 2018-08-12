@@ -56,6 +56,44 @@ public class LZ77 {
 
 	}
 	
+	public void Generate_String(String output_file_path) {
+		System.out
+				.println("hi this method geneartes strings with repetition with few mismatched symbols \n"
+						+ "for example: ababababfbabababgbab");
+		StringBuilder str = new StringBuilder();
+		
+		double probabilty;
+
+		for (int i = 0; i < 10000; i++) {
+			probabilty = Math.random();
+			if (probabilty > 0.1)
+				str.append('a');
+			else
+				str.append((char)(65+(Math.random()*35)));
+			probabilty = Math.random();
+			if (probabilty > 0.1)
+				str.append('b');
+			else
+				str.append((char)(65+(Math.random()*35)));
+		}
+		//System.out.println(str.toString());
+		String str_=str.toString();
+		byte [] generated_str=str_.getBytes();
+		try {
+			FileOutputStream fileOutputStream = new FileOutputStream(
+					output_file_path);
+			fileOutputStream.write(generated_str);
+			fileOutputStream.close();
+
+		} catch (FileNotFoundException e) {
+			System.out.println("File Not Found.");
+			e.printStackTrace();
+		} catch (IOException e1) {
+			System.out.println("Error Writing The File.");
+			e1.printStackTrace();
+		}
+		
+	}
 	
 	public void Compress(String input_file_path, String output_file_path) {
 
