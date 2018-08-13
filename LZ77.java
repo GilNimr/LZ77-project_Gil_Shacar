@@ -584,7 +584,7 @@ public class LZ77 {
 							byte charBeforeChange = content_file_as_bytes[j_+step_forward_]; // if we will not change
 						//	int savingNowIndex = (j_+step_forward_);
 							
-							
+							boolean saveIfUpgraded = upgrade;
 							checkIfUpgrade(tmp_l, temp_step, temp_j, temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch , save_old_char, save_index_of_upgrade, save_char_after_twist);
 							
 							
@@ -592,6 +592,9 @@ public class LZ77 {
 							if (upgrade) {
 								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j_, step_forward_, true);
 								
+							}
+							else if (saveIfUpgraded) {
+								upgrade=true;
 							}
 						}
 					}	
