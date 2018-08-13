@@ -176,7 +176,7 @@ public class LZ77 {
 	
 	
 	public void CompressWithUpgrade(String input_file_path, String output_file_path, String upgrade_side_file_path) {
-		
+		System.out.println("checcccccccccccccccc");
 //		System.out.println("Compress with upgrade");
 		File input_file = new File(input_file_path);
 		content_file_as_bytes = new byte[(int) input_file.length()]; 
@@ -383,8 +383,8 @@ public class LZ77 {
 //						specific_index_of_changes = temp_specific_index;
 						
 						if (was_first_change) {
-							for (int i=0; i<final_number_of_changes; i++) {							
-								content_file_as_bytes[save_index_of_upgrade[i]] = save_old_char[i];
+							for (int i=0; i<number_of_changes; i++) {							
+								content_file_as_bytes[temp_index_of_upgrade_[i]] = temp_save_old_char[i];
 							}
 						}
 					}
@@ -399,9 +399,9 @@ public class LZ77 {
 					System.out.println("we will save that's k [" + (k+1) +"] as: ("+d+", " + l + ", " + c +")");
 					
 				}
-				else if (upgrade) {
-					for (int i=0; i<final_number_of_changes; i++) {							
-						content_file_as_bytes[save_index_of_upgrade[i]] = save_old_char[i];
+				else if (was_first_change) {
+					for (int i=0; i<number_of_changes; i++) {							
+						content_file_as_bytes[temp_index_of_upgrade_[i]] = temp_save_old_char[i];
 					}
 				}
 				
@@ -951,8 +951,8 @@ public class LZ77 {
 				//	content_file_as_bytes[j+step_forward] = content_file_as_bytes[j- tmp_d + step_forward];
 					number_of_changes++;
 					
-				System.out.println("This is the " + number_of_changes + "number of change.\nnew char: " + content_file_as_bytes[j+step_forward]+
-							", at index: " + j+step_forward + ". old char: " + charBeforeChange);
+				System.out.println("This is the " + number_of_changes + "number of change.\nnew char: " + (char) content_file_as_bytes[j+step_forward]+
+							", at index: " + (j+step_forward) + ". old char: " +(char) charBeforeChange);
 				}
 		  }
 		  else {
