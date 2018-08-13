@@ -289,6 +289,7 @@ public class LZ77 {
 				while ((content_file_as_bytes[j + step_forward] == content_file_as_bytes[j
 						- tmp_d + step_forward])) {
 					
+					boolean loopWithUpgrade = upgrade;
 					tmp_l++;
 					step_forward++;
 					
@@ -327,19 +328,23 @@ public class LZ77 {
 								
 								byte charBeforeChange = content_file_as_bytes[j + step_forward];
 								boolean saveFirst = was_first_change;
+								boolean saveIfUpgrade = loopWithUpgrade;
 								checkIfUpgrade(tmp_l, step_forward, j, temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch,  save_old_char, save_index_of_upgrade, save_char_after_twist);
 							
 								  if (upgrade) {
 									  
 									 putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, temp_save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward, saveFirst);
 								}
+								  else if (saveIfUpgrade) {
+									  upgrade = true;
+								  }
 							}
 						}	
 					}
 					
 				} // end while
 
-				if ( (tmp_l > l) ||   (tmp_l==l) && (!upgrade)  ){
+				if ( (tmp_l > l) ||   ( (tmp_l==l) && (!upgrade) ) ){
 					
 					if (upgrade) {
 						
@@ -409,7 +414,7 @@ public class LZ77 {
 				
 				System.out.println("we finish k and we use the upgrade");
 				
-				for (int i=0; i<number_of_changes; i++) {
+				for (int i=0; i<final_number_of_changes; i++) {
 					
 					/*
 					indexes_of_changes[specific_index_of_changes] = save_index_of_upgrade[i];
@@ -946,8 +951,8 @@ public class LZ77 {
 			//	content_file_as_bytes[j+step_forward] = content_file_as_bytes[j- tmp_d + step_forward];
 				number_of_changes++;
 				
-			System.out.println("This is the " + number_of_changes + "number of change.\nnew char: " + content_file_as_bytes[j+step_forward]+
-						", at index: " + j+step_forward + ". old char: " + charBeforeChange);
+			System.out.println("This is the " + number_of_changes + "number of change.\nnew char: " + (char)content_file_as_bytes[j+step_forward]+
+						", at index: " + j+step_forward + ". old char: " +(char) charBeforeChange);
 		 }
 		  
 		  
