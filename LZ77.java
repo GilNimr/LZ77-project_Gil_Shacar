@@ -11,7 +11,7 @@ import javax.crypto.CipherInputStream;
 
 import org.omg.PortableInterceptor.USER_EXCEPTION;
 
-import com.sun.xml.internal.messaging.saaj.util.TeeInputStream;
+
 
 /*
  * the tuple will be as follows: (d,l,c), d is how far go back to go, l
@@ -363,7 +363,30 @@ public class LZ77 {
 						tempOfFinalCharAfterTwist =  content_file_as_bytes[j - tmp_d + step_forward];
 					}
 					
-					
+					if (j + step_forward + 1 <= content_file_as_bytes.length)    {
+						
+						if ( content_file_as_bytes[j - tmp_d + step_forward]  != content_file_as_bytes[j + step_forward]) {
+							changeTheExtra=true;
+							c = (char) content_file_as_bytes[j - tmp_d + step_forward] ;
+							
+							
+				/*			save_old_char[0] = content_file_as_bytes[j + step_forward];
+							save_index_of_upgrade[0] = j + step_forward;	
+							save_char_after_twist[0] =content_file_as_bytes[j - tmp_d + step_forward];
+							//content_file_as_bytes[temp_index_of_upgrade_[i]] = save_old_char[i];
+					*/		
+						}
+						
+						else {
+							c = (char) content_file_as_bytes[j + step_forward];	
+						}
+						
+						
+					}
+						
+						
+					else
+						c = ' ';
 					
 					
 					
@@ -410,30 +433,7 @@ public class LZ77 {
 					
 					l = tmp_l;
 					d = tmp_d;
-					if (j + step_forward + 1 <= content_file_as_bytes.length)    {
-						
-						if ( content_file_as_bytes[j - tmp_d + step_forward]  != content_file_as_bytes[j + step_forward]) {
-							changeTheExtra=true;
-							c = (char) content_file_as_bytes[j - tmp_d + step_forward] ;
-							
-							
-				/*			save_old_char[0] = content_file_as_bytes[j + step_forward];
-							save_index_of_upgrade[0] = j + step_forward;	
-							save_char_after_twist[0] =content_file_as_bytes[j - tmp_d + step_forward];
-							//content_file_as_bytes[temp_index_of_upgrade_[i]] = save_old_char[i];
-					*/		
-						}
-						
-						else {
-							c = (char) content_file_as_bytes[j + step_forward];	
-						}
-						
-						
-					}
-						
-						
-					else
-						c = ' ';
+
 					
 					System.out.println("we will save that's k [" + (k+1) +"] as: ("+d+", " + l + ", " + c +")");
 					
