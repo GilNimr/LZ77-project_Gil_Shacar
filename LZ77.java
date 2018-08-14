@@ -11,6 +11,8 @@ import javax.crypto.CipherInputStream;
 
 import org.omg.PortableInterceptor.USER_EXCEPTION;
 
+import com.sun.xml.internal.messaging.saaj.util.TeeInputStream;
+
 /*
  * the tuple will be as follows: (d,l,c), d is how far go back to go, l
  * is how many characters to copy, c is the next character after that.
@@ -54,7 +56,7 @@ public class LZ77 {
 	LZ77() { 
 		sliding_window = tmp_d =
 				d = tmp_l = l = index_of_compressed_content_bytes_to_output_file = 0;
-		look_a_head_buffer = 7;
+		look_a_head_buffer = 31;
 
 	}
 	
@@ -67,7 +69,7 @@ public class LZ77 {
 		
 		double probabilty;
 
-		for (int i = 0; i < 10000; i++) {
+		for (int i = 0; i < 5000; i++) {
 			probabilty = Math.random();
 			if (probabilty > 0.1)
 				str.append('a');
@@ -76,9 +78,9 @@ public class LZ77 {
 			probabilty = Math.random();
 			if (probabilty > 0.1)
 				str.append('b');
-			else
+		/*	else
 				str.append((char)(65+(Math.random()*35)));
-		}
+	*/	}
 		//System.out.println(str.toString());
 		String str_=str.toString();
 		byte [] generated_str=str_.getBytes();
@@ -121,8 +123,8 @@ public class LZ77 {
 
 			c = (char) content_file_as_bytes[j];
 			sliding_window = j;
-			if (sliding_window > 31)
-				sliding_window = 31;
+			if (sliding_window > 7)
+				sliding_window = 7;
 
 			for (int k = 0; k < sliding_window; k++) {
 				tmp_l = 0;
@@ -176,7 +178,7 @@ public class LZ77 {
 	
 	
 	public void CompressWithUpgrade(String input_file_path, String output_file_path, String upgrade_side_file_path) {
-		
+		System.out.println("checcccccccccccccccc");
 //		System.out.println("Compress with upgrade");
 		File input_file = new File(input_file_path);
 		content_file_as_bytes = new byte[(int) input_file.length()]; 
@@ -220,25 +222,31 @@ public class LZ77 {
 			byte[] save_char_after_twist = new byte[look_a_head_buffer+1];
 			int[] save_index_of_upgrade= new int[look_a_head_buffer+1]; // will save indexes about changes, each new letter will restart
 //			int temp_specific_index=0;
+			int tempOfFinalIndex=0;
+			byte tempOfFinalOldChar=0, tempOfFinalCharAfterTwist=0; 
+			boolean changeTheExtra=false;
 			
 			
 			
 			for (int i=0; i<look_a_head_buffer+1; i++) {
-				save_char_after_twist[i]= temp_save_char_after_switch[i] =
-				save_old_char[i] =temp_save_old_char[i] = 0;
+				save_char_after_twist[i]= 0;
+				temp_save_char_after_switch[i] =0;
+				save_old_char[i] =0;
+				temp_save_old_char[i] = 0;
 				save_index_of_upgrade[i] =temp_index_of_upgrade_[i] = 0;  
 			}
 				
 			sliding_window = j;
-			if (sliding_window > 31)
-				sliding_window = 31;
+			if (sliding_window > 7)
+				sliding_window = 7;
 
 			System.out.println("we are reading index [" + j +"], it's \"" + c + "\", and our sliding window size is " + sliding_window + "\n");
 			
 			for (int k = 0; k < sliding_window; k++) {
 				number_of_changes=0;
 				for (int i=0; i<look_a_head_buffer+1; i++) {
-					temp_save_char_after_switch[i] = temp_save_old_char[i] = 0;
+					temp_save_char_after_switch[i] =0;
+					temp_save_old_char[i] = 0;
 					temp_index_of_upgrade_[i] = 0;  
 				}
 				
@@ -277,7 +285,7 @@ public class LZ77 {
 							checkIfUpgrade(tmp_l, step_forward, j, temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch,  save_old_char, save_index_of_upgrade, save_char_after_twist);
 							
 							if (upgrade) {
-								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, temp_save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward, saveFirst);
+								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward, saveFirst);
 								
 							}
 
@@ -333,7 +341,7 @@ public class LZ77 {
 							
 								  if (upgrade) {
 									  
-									 putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, temp_save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward, saveFirst);
+									 putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward, saveFirst);
 								}
 								  else if (saveIfUpgrade) {
 									  upgrade = true;
@@ -343,8 +351,22 @@ public class LZ77 {
 					}
 					
 				} // end while
-
-				if ( (tmp_l > l) ||   ( (tmp_l==l) && (!upgrade) ) ){
+				
+				
+				
+				if ( (tmp_l > l) ||   ( (tmp_l==l) && (!upgrade) && (tmp_l>0) ) ){
+					System.out.println("tmp_l: " + tmp_l + ", l: " + l + ", upgrade= " + upgrade);
+					
+					if (j+step_forward<content_file_as_bytes.length) {
+						tempOfFinalIndex = j+step_forward;
+						tempOfFinalOldChar = content_file_as_bytes[j+step_forward];
+						tempOfFinalCharAfterTwist =  content_file_as_bytes[j - tmp_d + step_forward];
+					}
+					
+					
+					
+					
+					
 					
 					if (upgrade) {
 						
@@ -378,23 +400,48 @@ public class LZ77 {
 					else {
 						use_the_upgrade = false;
 //						specific_index_of_changes = temp_specific_index;
-						
+					//	final_number_of_changes=1;
 						if (was_first_change) {
 							for (int i=0; i<number_of_changes; i++) {							
-								content_file_as_bytes[save_index_of_upgrade[i]] = save_old_char[i];
+								content_file_as_bytes[temp_index_of_upgrade_[i]] = temp_save_old_char[i];
 							}
 						}
 					}
 					
 					l = tmp_l;
 					d = tmp_d;
-					if (j + step_forward + 1 <= content_file_as_bytes.length)    /// ------added <=
-						c = (char) content_file_as_bytes[j + step_forward];
+					if (j + step_forward + 1 <= content_file_as_bytes.length)    {
+						
+						if ( content_file_as_bytes[j - tmp_d + step_forward]  != content_file_as_bytes[j + step_forward]) {
+							changeTheExtra=true;
+							c = (char) content_file_as_bytes[j - tmp_d + step_forward] ;
+							
+							
+				/*			save_old_char[0] = content_file_as_bytes[j + step_forward];
+							save_index_of_upgrade[0] = j + step_forward;	
+							save_char_after_twist[0] =content_file_as_bytes[j - tmp_d + step_forward];
+							//content_file_as_bytes[temp_index_of_upgrade_[i]] = save_old_char[i];
+					*/		
+						}
+						
+						else {
+							c = (char) content_file_as_bytes[j + step_forward];	
+						}
+						
+						
+					}
+						
+						
 					else
 						c = ' ';
 					
 					System.out.println("we will save that's k [" + (k+1) +"] as: ("+d+", " + l + ", " + c +")");
 					
+				}
+				else if (was_first_change) {
+					for (int i=0; i<number_of_changes; i++) {							
+						content_file_as_bytes[temp_index_of_upgrade_[i]] = temp_save_old_char[i];
+					}
 				}
 				
 				// added today
@@ -435,6 +482,31 @@ public class LZ77 {
 				
 				
 			}
+			
+			if (changeTheExtra) {
+				System.out.println("We use changeExtra:");
+				
+				
+				
+				
+				content_file_as_bytes[tempOfFinalIndex] =tempOfFinalCharAfterTwist;	
+				
+				indexes_of_changes[indexesAtFinito] = tempOfFinalIndex;
+				letters_to_save[indexesAtFinito] = tempOfFinalOldChar;
+				
+				
+
+
+				
+				
+				System.out.println("we save upgrade: at index [" + indexes_of_changes[indexesAtFinito]
+						+ "], its now: \"" + (char) content_file_as_bytes[tempOfFinalIndex]  + "\", we will change later to \"" + (char) letters_to_save[indexesAtFinito] + "\"");
+				
+				indexesAtFinito++;
+				changeTheExtra=false;
+			}
+			
+			
 			else {
 		//		System.out.println("we dont use upgrade");
 			}
@@ -605,7 +677,7 @@ public class LZ77 {
 				
 		} while ((content_file_as_bytes[j_ + step_forward_] == content_file_as_bytes[j_- tmp_d + step_forward_]));
 		
-		if (added_to_l > 2) {
+		if (added_to_l > 2){
 		
 			upgrade = true;
 			System.out.println("was_first is now true");
@@ -670,7 +742,7 @@ public class LZ77 {
 		while (l_str.length() < 8) {
 			l_str = "0" + l_str;
 		}
-		String d_l_str = d_str.substring(3, 8) + l_str.substring(5, 8);
+		String d_l_str = d_str.substring(5, 8) + l_str.substring(3, 8);
 		int d_l_int = Integer.parseUnsignedInt(d_l_str, 2);
 		byte d_l_byte = (byte) d_l_int;
 		byte c_byte = (byte) c;
@@ -792,10 +864,10 @@ public class LZ77 {
 			d = (int) compressed_file_as_bytes[j];
 			d = d << 24;
 			d = d >>> 24;
-			d = d >>> 3;
+			d = d >>> 5;
 			l = (int) compressed_file_as_bytes[j];
-			l = l << 29; // 32-3
-			l = l >>> 29;//32-3
+			l = l << 27; // 32-3
+			l = l >>> 27;//32-3
 		//	System.out.println("d is: "+d+" l is: "+l);
 
 			if (d == 0) {
@@ -826,6 +898,7 @@ public class LZ77 {
 			System.out.println("Error Writing The File.");
 			e1.printStackTrace();
 		}
+		System.out.println("Decompress succes");
 	}
 	
 	
@@ -875,10 +948,10 @@ public class LZ77 {
 			d = (int) compressed_file_as_bytes[j];
 			d = d << 24;
 			d = d >>> 24;
-			d = d >>> 3;
+			d = d >>> 5;
 			l = (int) compressed_file_as_bytes[j];
-			l = l << 29; // 32-3
-			l = l >>> 29;//32-3
+			l = l << 27; // 32-3
+			l = l >>> 27;//32-3
 	//		System.out.println("d is: "+d+" l is: "+l);
 
 			if (d == 0) {
@@ -943,8 +1016,8 @@ public class LZ77 {
 				//	content_file_as_bytes[j+step_forward] = content_file_as_bytes[j- tmp_d + step_forward];
 					number_of_changes++;
 					
-				System.out.println("This is the " + number_of_changes + "number of change.\nnew char: " + content_file_as_bytes[j+step_forward]+
-							", at index: " + j+step_forward + ". old char: " + charBeforeChange);
+				System.out.println("This is the " + number_of_changes + "number of change.\nnew char: " + (char) content_file_as_bytes[j+step_forward]+
+							", at index: " + (j+step_forward) + ". old char: " +(char) charBeforeChange);
 				}
 		  }
 		  else {
@@ -955,7 +1028,7 @@ public class LZ77 {
 				number_of_changes++;
 				
 			System.out.println("This is the " + number_of_changes + "number of change.\nnew char: " + (char)content_file_as_bytes[j+step_forward]+
-						", at index: " + j+step_forward + ". old char: " +(char) charBeforeChange);
+						", at index: " + (j+step_forward) + ". old char: " +(char) charBeforeChange);
 		 }
 		  
 		  
