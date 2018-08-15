@@ -342,11 +342,13 @@ public class LZ77 {
 					
 				} // end while
 				
-				if ( (tmp_l > l) ||   ( (tmp_l==l) && (!upgrade) && (tmp_l>0) ) ){
+				if ( (tmp_l > l) || ( (tmp_l==l) && (!upgrade) && (tmp_l>0) ) || ((tmp_l==l) && (upgrade) && (tmp_l>0) && (final_number_of_changes>number_of_changes) ) ){
 
-					// if we found optimal compressed at that iteration: tmp_l bigger then l, or equal to l but not use the upgrade
-					// we prefer use the usual lz_77 if it the same l because the upgrade are use more bytes at compressed file
-
+					/* if we found optimal compressed at that iteration: tmp_l bigger then l.
+						--	or tmp_l equal to l but not use the upgrade - we prefer use the usual lz_77 if it the same 
+								l because the upgrade are use more bytes at compressed file
+					 	--	or we prefer use compression with much less changes because each change is more size of compressed file
+					 	*/
 					if (j+step_forward<content_file_as_bytes.length) { // if we still not finished to read
 						// we save the values of the next char, that going to be at c variable
 						tempOfFinalIndex = j+step_forward;
