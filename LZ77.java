@@ -26,6 +26,9 @@ public class LZ77 {
 	private int tmp_l; // variable for finding l.
 	private int l; // length of bytes to copy.
 	private int index_of_compressed_content_bytes_to_output_file=0; // index for appointing bytes to compressed_content_bytes_to_output_file variable	
+	private final int max_sliding_window;
+	private final int bits_of_max_sliding_window;
+	private final int bits_of_look_a_head_buffer;
 	private  final int look_a_head_buffer; // the look a head buffer
 	private byte[] content_file_as_bytes; // array  of all the bytes of the file.
 	private byte[] compressed_content_bytes_to_output_file; //array  of all the bytes in the output file.
@@ -36,11 +39,14 @@ public class LZ77 {
 	private boolean was_first_change;	//   will be off each new letter we will read (at loop), will be true after first use at upgrade because of saving the 								// changes if we will not use specific upgrade after that time
 	private int number_of_changes;	// how much changes at each new letter we will read (at loop). counter 
 
-	LZ77() { 
-		// default values to global variables:
-		sliding_window = tmp_d =
-				d = tmp_l = l = index_of_compressed_content_bytes_to_output_file = 0;
-		look_a_head_buffer = 31;
+	LZ77(int bits_of_max_sliding_window, int bits_of_look_a_head_buffer) {
+		this.max_sliding_window=(int)Math.pow(2, (double) bits_of_max_sliding_window)-1;
+		this.look_a_head_buffer=(int)Math.pow(2, (double) bits_of_look_a_head_buffer)-1;
+		this.bits_of_look_a_head_buffer=bits_of_look_a_head_buffer;
+		this.bits_of_max_sliding_window=bits_of_max_sliding_window;
+		
+		sliding_window = tmp_d = d = tmp_l = l = index_of_compressed_content_bytes_to_output_file = 0;
+		
 
 	}
 	
@@ -107,8 +113,8 @@ public class LZ77 {
 
 			c = (char) content_file_as_bytes[j];
 			sliding_window = j;
-			if (sliding_window > 7)
-				sliding_window = 7;
+			if (sliding_window > max_sliding_window)
+				sliding_window = max_sliding_window;
 
 			for (int k = 0; k < sliding_window; k++) {
 				tmp_l = 0;
@@ -230,8 +236,8 @@ public class LZ77 {
 				
 			// definition the sliding window respectively to j
 			sliding_window = j;
-			if (sliding_window > 7)
-				sliding_window = 7;
+			if (sliding_window > max_sliding_window)
+				sliding_window = max_sliding_window;
 
 			//after all definitions, we are reading index [j], it's c, and we start loop on sliding window:
 			
@@ -631,10 +637,10 @@ public class LZ77 {
 			d = (int) compressed_file_as_bytes[j];
 			d = d << 24;
 			d = d >>> 24;
-			d = d >>> 5;
+			d = d >>> bits_of_look_a_head_buffer;
 			l = (int) compressed_file_as_bytes[j];
-			l = l << 27; // 32-3
-			l = l >>> 27;//32-3
+			l = l << 24+bits_of_max_sliding_window; // 32-3
+			l = l >>> 24+bits_of_max_sliding_window;// 32-3
 		//	System.out.println("d is: "+d+" l is: "+l);
 
 			if (d == 0) {
@@ -714,10 +720,10 @@ public class LZ77 {
 			d = (int) compressed_file_as_bytes[j];
 			d = d << 24;
 			d = d >>> 24;
-			d = d >>> 5;
+			d = d >>> bits_of_look_a_head_buffer;
 			l = (int) compressed_file_as_bytes[j];
-			l = l << 27; // 32-3
-			l = l >>> 27;//32-3
+			l = l << 24+bits_of_max_sliding_window; // 32-3
+			l = l >>> 24+bits_of_max_sliding_window;// 32-3
 	//		System.out.println("d is: "+d+" l is: "+l);
 
 			if (d == 0) {
