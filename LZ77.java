@@ -56,24 +56,31 @@ public class LZ77 {
 				.println("hi this method geneartes strings with repetition with few mismatched symbols \n"
 						+ "for example: ababababfbabababgbab");
 		StringBuilder str = new StringBuilder();
-		
-		double probabilty;
 
-		for (int i = 0; i < 5000; i++) {
+		double probabilty;
+		boolean error = false;
+
+		for (int i = 0; i < 1000; i++) {
 			probabilty = Math.random();
-			if (probabilty > 0.1)
+			if ((probabilty > 0.3) || (error == false)) {
 				str.append('a');
-			else
-				str.append((char)(65+(Math.random()*35)));
+				error = true;
+			} else {
+				str.append((char) (33 + (Math.random() * 113)));
+				error = false;
+			}
 			probabilty = Math.random();
-			if (probabilty > 0.1)
+			if ((probabilty > 0.3) || (error == false)) {
 				str.append('b');
-		/*	else
-				str.append((char)(65+(Math.random()*35)));
-	*/	}
-		//System.out.println(str.toString());
-		String str_=str.toString();
-		byte [] generated_str=str_.getBytes();
+				error = true;
+			} else {
+				str.append((char) (33 + (Math.random() * 113)));
+				error = false;
+			}
+		}
+		// System.out.println(str.toString());
+		String str_ = str.toString();
+		byte[] generated_str = str_.getBytes();
 		try {
 			FileOutputStream fileOutputStream = new FileOutputStream(
 					output_file_path);
@@ -482,12 +489,37 @@ public class LZ77 {
 			DataOutputStream out = new DataOutputStream(fileOutputStream);
 			
 			// write the upgrade changes:
-		    out.writeInt(indexesAtFinito*3);
+			if(content_file_as_bytes.length <= 256){
+		    out.writeInt(indexesAtFinito*2);
+		    out.writeByte(1);
+			}
+			else if(content_file_as_bytes.length <= 65536){
+				out.writeInt(indexesAtFinito*3);
+			    out.writeByte(2);
+			}
+			else if(content_file_as_bytes.length <= 16777216){
+				out.writeInt(indexesAtFinito*4);
+			    out.writeByte(3);
+			}
+			else{
+				out.writeInt(indexesAtFinito*5);
+			    out.writeByte(4);
+			}
 			for (int i = 0; i < indexesAtFinito; i++) {
 				
 				//"at index: [indexes_of_changes[i]] we will change to letters_to_save[i]
-				
-				out.writeShort(indexes_of_changes[i]);
+				if(content_file_as_bytes.length <= 256)
+				    out.writeByte(indexes_of_changes[i]);
+				else if(content_file_as_bytes.length <= 65536)
+					out.writeShort(indexes_of_changes[i]);
+				else if(content_file_as_bytes.length <= 16777216){
+					byte[] b=ByteBuffer.allocate(4).putInt(indexes_of_changes[i]).array();
+					ByteBuffer wrapped = ByteBuffer.wrap(b);
+					int int_b = wrapped.getInt();
+					out.write(b, 1, 3);
+				}
+				else
+					out.writeInt(indexes_of_changes[i]);	
 				out.writeByte(letters_to_save[i]);
 			}
 			fileOutputStream.write(compressed_content_bytes_to_output_file, 0,
@@ -685,19 +717,21 @@ public class LZ77 {
 		
 		
 		byte[] size_of_fixing_info = new byte[4];
+		byte[] size_1_2_3_or_4=new byte[1];
 		byte[] compressed_file_as_bytes=null;
 		byte[] fixing_info=null;
 		
 		try {
 			FileInputStream fileInputStream = new FileInputStream(input_file);
 			fileInputStream.read(size_of_fixing_info);
+			fileInputStream.read(size_1_2_3_or_4);
 			ByteBuffer wrapped = ByteBuffer.wrap(size_of_fixing_info);
 			int int_size_of_fixing_info = wrapped.getInt();
 			
 			fixing_info = new byte[int_size_of_fixing_info];
 			fileInputStream.read(fixing_info);
 			wrapped.clear();
-			compressed_file_as_bytes = new byte[(int) input_file.length()-int_size_of_fixing_info];
+			compressed_file_as_bytes = new byte[(int) input_file.length()-int_size_of_fixing_info-3];
 			fileInputStream.read(compressed_file_as_bytes); // reading all the
 															// file
 															// into
@@ -744,15 +778,32 @@ public class LZ77 {
 			}
 			j++;
 		}
-		byte[] index_of_char_to_fix=new byte[2];
-		for (int i = 0; i <fixing_info.length-2; i=i+3) {
-			index_of_char_to_fix[0]=fixing_info[i];
-			index_of_char_to_fix[1]=fixing_info[i+1];
-		//	index_of_char_to_fix[2]=fixing_info[i+2];
-		//	index_of_char_to_fix[3]=fixing_info[i+3];
+		byte[] index_of_char_to_fix=new byte[4];
+		int int_index_of_char_to_fix;
+		byte original_byte;
+		for (int i = 0; i <fixing_info.length-size_1_2_3_or_4[0]; i=i+size_1_2_3_or_4[0]+1) {
+			for (int j = 0; j < size_1_2_3_or_4[0]; j++) {
+				index_of_char_to_fix[4-size_1_2_3_or_4[0]+j]=fixing_info[i+j];
+			}
 			ByteBuffer wrapped = ByteBuffer.wrap(index_of_char_to_fix);
-			short int_index_of_char_to_fix = wrapped.getShort();
-			byte original_byte=fixing_info[i+2];
+			
+			if(size_1_2_3_or_4[0]==1){
+				 int_index_of_char_to_fix = wrapped.getInt();
+			     original_byte=fixing_info[i+1];
+			}
+			else if(size_1_2_3_or_4[0]==2){
+				 int_index_of_char_to_fix = wrapped.getInt();
+				 original_byte=fixing_info[i+2];
+			}
+			else if(size_1_2_3_or_4[0]==3){
+				 int_index_of_char_to_fix = wrapped.getInt();
+				 original_byte=fixing_info[i+3];
+			}
+			else{
+				 int_index_of_char_to_fix = wrapped.getInt();
+				 original_byte=fixing_info[i+4];
+			}
+			
 			returned_original_bytes_to_output_file[int_index_of_char_to_fix]=original_byte;
 			
 			System.out.println("just changed ["+int_index_of_char_to_fix +"],to the char\"" +(char) returned_original_bytes_to_output_file[int_index_of_char_to_fix]+"\"");
