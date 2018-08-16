@@ -24,26 +24,20 @@ public class LZ77 {
 	private int tmp_d; // variable for finding d.
 	private int d; // how much going back.
 	private int tmp_l; // variable for finding l.
-	private int l; // length of characters to copy.
+	private int l; // length of bytes to copy.
 	private int index_of_compressed_content_bytes_to_output_file=0; // index for appointing bytes to compressed_content_bytes_to_output_file variable	
 	private  final int look_a_head_buffer; // the look a head buffer
 	private byte[] content_file_as_bytes; // array  of all the bytes of the file.
 	private byte[] compressed_content_bytes_to_output_file; //array  of all the bytes in the output file.
-	private char c; // the char we will put at each iterate of compresion
+	private char c; // the char we will put at each iterate of compression	
 	
-	// each iterarate of compression will show:   (d, l, c)
-	
-	
-	//upgrade compress definitions 
-	private int[] indexes_of_changes;	// all the indexes that we will change before decompress
-	private byte[] letters_to_save;		// all the chars as byte that we will fix before decompress at indexes from indexes_of_changes
+	//upgrade compress definitions of global variables
 	private boolean upgrade; // true if we going to save the upgrade - just at compress at specific iterate of k.
-	private boolean use_the_upgrade;	// true if we finished k iterate and we going to use the upgrade
-	private boolean was_first_change;	//   will be off each new letter we will read (at loop), will be true after first use at upgrade because of saving the 
-									// changes if we will not use specific upgrade after that time
+	private boolean was_first_change;	//   will be off each new letter we will read (at loop), will be true after first use at upgrade because of saving the 								// changes if we will not use specific upgrade after that time
 	private int number_of_changes;	// how much changes at each new letter we will read (at loop). counter 
 
 	LZ77() { 
+		// default values to global variables:
 		sliding_window = tmp_d =
 				d = tmp_l = l = index_of_compressed_content_bytes_to_output_file = 0;
 		look_a_head_buffer = 31;
@@ -169,7 +163,10 @@ public class LZ77 {
 	
 	public void CompressWithUpgrade(String input_file_path, String output_file_path) {
 		
-		//definition the variables that dependent on input file
+		//definition the local variables
+		 int[] indexes_of_changes;	// all the indexes that we will change before decompress
+		byte[] letters_to_save;		// all the bytes that we will fix before decompress at indexes from indexes_of_changes
+		boolean use_the_upgrade;	// true if we finished k iterate and we going to use the upgrade
 		File input_file = new File(input_file_path);	// the input
 		content_file_as_bytes = new byte[(int) input_file.length()];	 
 		compressed_content_bytes_to_output_file = new byte[(int) input_file.length() * 2];
@@ -201,20 +198,21 @@ public class LZ77 {
 			number_of_changes= final_number_of_changes=0;
 			c = (char) content_file_as_bytes[j];
 			
-			// definition local variables:
+			// definition local variables of loop:
 			
-			/* 	we have 3 doubles of arrays - temporary and save of each: index, old char and new char ufter each upgrade.
+			/* 	we have 3 doubles of arrays - temporary and save of each: indexes, old chars and new bytes after each upgrade.
 			 	temporary - will change each new upgrade
 			 	save - will change if we see that last upgrade was optimal
-			 	the size will be the size of 1 more than look_a_head_buffer because it is for each new letter we read, and we 
-			 	can each letter change maximum of l 
+			 	the size will be the size of look_a_head_buffer because we want the size of the arrays will be
+			 	a little bit more then the maximum of change we can do at same compress 
 			*/
-			byte[] temp_save_char_after_switch = new byte[look_a_head_buffer+1]; // all the chars (after changes)
-			int[] temp_index_of_upgrade_= new int[look_a_head_buffer+1]; //all the indexes  we save 	
-			byte[] temp_save_old_char= new byte[look_a_head_buffer+1];	// all the chars (before change) we save inside  
-			byte[] save_old_char = new byte[look_a_head_buffer+1];
-			byte[] save_char_after_twist = new byte[look_a_head_buffer+1];
-			int[] save_index_of_upgrade= new int[look_a_head_buffer+1]; 
+			
+			byte[] temp_save_char_after_switch = new byte[look_a_head_buffer]; // all the bytes (after changes)
+			int[] temp_index_of_upgrade_= new int[look_a_head_buffer]; //all the indexes  we save 	
+			byte[] temp_save_old_char= new byte[look_a_head_buffer];	// all the bytes (before changes) we save inside  
+			byte[] save_old_char = new byte[look_a_head_buffer]; 
+			byte[] save_char_after_twist = new byte[look_a_head_buffer];
+			int[] save_index_of_upgrade= new int[look_a_head_buffer]; 
 			
 			// maybe we will need to change c (the variable) also, so we will save it with that variables:
 			int tempOfFinalIndex=0; // c index
@@ -224,7 +222,7 @@ public class LZ77 {
 			
 			
 			// default values to the save (no temporary) arrays:
-			for (int i=0; i<look_a_head_buffer+1; i++) {
+			for (int i=0; i<look_a_head_buffer; i++) {
 				save_char_after_twist[i]= 0;
 				save_old_char[i] =0;
 				save_index_of_upgrade[i] =0;  
@@ -246,7 +244,9 @@ public class LZ77 {
 				tmp_d = sliding_window - k;
 				upgrade = false;
 				int step_forward = 0; // variable of steps after the first letter of sliding window that we can copy
-				for (int i=0; i<look_a_head_buffer+1; i++) {
+				
+				// default values to the temporary arrays:
+				for (int i=0; i<look_a_head_buffer; i++) {
 					temp_save_char_after_switch[i] =0;
 					temp_save_old_char[i] = 0;
 					temp_index_of_upgrade_[i] = 0;  
@@ -407,7 +407,7 @@ public class LZ77 {
 				
 				
 				
-				else if (was_first_change) { // if we finished iteration, we changed someting but at the end we are not use it, we return it:
+				else if (was_first_change) { // if we finished iteration, we changed something but at the end we are not use it, we return it:
 					for (int i=0; i<number_of_changes; i++) {							
 						content_file_as_bytes[temp_index_of_upgrade_[i]] = temp_save_old_char[i];
 					}
@@ -542,6 +542,7 @@ public class LZ77 {
 							byte charBeforeChange = content_file_as_bytes[j_+step_forward_]; // if we will not change
 							boolean saveIfUpgraded = upgrade;
 							
+							// recursion:
 							checkIfUpgrade(tmp_l, temp_step, temp_j, temp_index_of_upgrade_, 
 									temp_save_old_char, temp_save_char_after_switch , save_old_char, save_index_of_upgrade, save_char_after_twist);
 							
