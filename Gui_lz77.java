@@ -10,8 +10,10 @@ import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.JTextField;
 
 public class Gui_lz77 {
 
@@ -27,6 +29,7 @@ public class Gui_lz77 {
 						// 4-DecompressUpgrade
 	private LZ77 lz;
 	protected String upgrade_side_file_path; // needs to delete this!
+	private JTextField textFieldWindow;
 
 	/**
 	 * Launch the application.
@@ -48,7 +51,7 @@ public class Gui_lz77 {
 	 * Create the application.
 	 */
 	public Gui_lz77() {
-		lz = new LZ77();
+		lz = new LZ77(3,5);
 		initialize();
 	}
 
@@ -190,7 +193,7 @@ public class Gui_lz77 {
 		other_actions_panel.add(lbOpenFile);
 
 		JLabel lbSaveAt = new JLabel("");
-		lbSaveAt.setBounds(210, 91, 200, 23);
+		lbSaveAt.setBounds(210, 44, 200, 23);
 		other_actions_panel.add(lbSaveAt);
 
 		JButton btnOpenFile = new JButton("Open file");
@@ -241,28 +244,62 @@ public class Gui_lz77 {
 				}
 			}
 		});
-		btnSaveAt.setBounds(10, 91, 149, 23);
+		btnSaveAt.setBounds(10, 44, 149, 23);
 		other_actions_panel.add(btnSaveAt);
 
 		JLabel lbcomputing_done = new JLabel("");
 		lbcomputing_done.setBounds(200, 221, 71, 14);
 		other_actions_panel.add(lbcomputing_done);
+		
+		JLabel lbBitsWindow = new JLabel("Size in bits of sliding window:");
+		lbBitsWindow.setBounds(10, 89, 143, 14);
+		other_actions_panel.add(lbBitsWindow);
+		
+		JLabel lbBitsLook = new JLabel("Size in bits of the look a head buffer:");
+		lbBitsLook.setBounds(10, 114, 185, 14);
+		other_actions_panel.add(lbBitsLook);
+		
+		JLabel lbLook = new JLabel("5");
+		lbLook.setBounds(260, 114, 88, 14);
+		other_actions_panel.add(lbLook);
+		
+		textFieldWindow = new JTextField();
+		textFieldWindow.setText("3");
+		textFieldWindow.setBounds(262, 86, 86, 20);
+		other_actions_panel.add(textFieldWindow);
+		textFieldWindow.setColumns(10);
 
 		JButton btnGo = new JButton("Go");
 		btnGo.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				int sliding_window, look_a_head;
+				try{
+					sliding_window=Integer.parseInt(textFieldWindow.getText());
+					if(sliding_window>7||sliding_window<1){
+	
+						throw new Exception();
+						
+					}
+		            look_a_head=8-sliding_window;
+		            lbLook.setText(Integer.toString(look_a_head));
+		           lz=new LZ77(sliding_window,look_a_head);
+					}
+				catch(Exception e1){
+					JOptionPane.showMessageDialog(null, "please enter a valid number between 1-7");
+					action=5;
+				}
 				if (action == 1) {
 					lbcomputing_done.setText("compressing..");
 					lz.Compress(input_file_path, output_file_path);
 					lbcomputing_done.setText("done!");
+					
 				} else if (action == 2) {
 					lbcomputing_done.setText("decompressing..");
 					lz.Decompress(input_file_path, output_file_path);
 					lbcomputing_done.setText("done!");
 				} else if (action == 3) {
 					lbcomputing_done.setText("compressing..");
-					lz.CompressWithUpgrade(input_file_path, output_file_path,
-							upgrade_side_file_path);
+					lz.CompressWithUpgrade(input_file_path, output_file_path);
 					lbcomputing_done.setText("done!");
 				} else if (action == 4) {
 					lbcomputing_done.setText("decompressing..");
@@ -278,11 +315,17 @@ public class Gui_lz77 {
 		btnBack_1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				other_actions_panel.setVisible(false);
+				lbOpenFile.setText("");
+				lbSaveAt.setText("");
+				input_file_path=null;
+				output_file_path=null;
 				menu_panel.setVisible(true);
 			}
 		});
 		btnBack_1.setBounds(10, 217, 71, 23);
 		other_actions_panel.add(btnBack_1);
+		
+		
 
 	}
 }
