@@ -5,89 +5,106 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.sql.Savepoint;
-
-import javax.crypto.CipherInputStream;
-
-import org.omg.PortableInterceptor.USER_EXCEPTION;
-
-
-
-/*
- * the tuple will be as follows: (d,l,c), d is how far go back to go, l
- * is how many characters to copy, c is the next character after that.
- */
 
 public class LZ77 {
-	
-	private int sliding_window; // the sliding_window, later will be maximum of 31
-	private int tmp_d; // variable for finding j.
+
+	private int sliding_window; // the sliding_window
+	private int tmp_d; // variable for finding d.
 	private int d; // how much going back.
-	private int tmp_l; // variable for finding l.
-	private int l; // length of characters to copy.
-	private int index_of_compressed_content_bytes_to_output_file=0; // index for appointing bytes to 
-	
-	
-		//compressed_content_bytes_to_output_file variable
-	private  final int look_a_head_buffer; // the look a head buffer, maximum of 7
-	private byte[] content_file_as_bytes; // array  of all the bytes of the file.
-	private byte[] compressed_content_bytes_to_output_file; //array  of all the bytes in the output file.
-	private char c;
-	
-	//upgrade compress definitions
-	private int[] indexes_of_changes;	// all the indexes that we will change before decompress
-	private byte[] letters_to_save;		// all the chars as byte that we will change before decompress at indexes_of_changes
-	private boolean upgrade; // true if we going to save the upgrade - just at compress at specific iterate of k
-	private boolean use_the_upgrade;	// true if we finished k iterate and we going to use the upgrade
-	
-	
-	private boolean was_first_change;	//   will be off each j iterate, will be true after first use at upgrade because of saving the 
-									// changes if we will not use specific upgrade at that time
-	private int number_of_changes;	// how much changes at each j iterate. counter
-//	private boolean optimate; // will be on if with upgrade will get to the end of iterate
-	
-//	private int specific_index_of_changes; 
-	
+	private int tmp_l; // variable for finding l.	
+	private int l; // length of bytes to copy.
+	private char c; // the char we will put at each iterate of compression
+
+	private int index_of_compressed_content_bytes_to_output_file = 0;	// index for appointing
+	//bytes to compressed_content_bytes_to_output_file variable
+
+	private final int max_sliding_window;// sliding window max size.
+
+	private final int bits_of_max_sliding_window; // sliding window
+													// max size in bits.
+
+	private final int look_a_head_buffer; // size of look a head buffer
+
+	private final int bits_of_look_a_head_buffer;// size of look a head buffer
+													// in bits.
+	private byte[] content_file_as_bytes; // array of all the bytes of the file.
 
 	
-
+	private byte[] compressed_content_bytes_to_output_file;// array of all the 
+	//compressed bytes sent to output file.
 	
+	/* upgrade compress definitions of global variables */
 
-	LZ77() { 
-		sliding_window = tmp_d =
-				d = tmp_l = l = index_of_compressed_content_bytes_to_output_file = 0;
-		look_a_head_buffer = 31;
+	private boolean upgrade;// true if we going to save the upgrade - just at
+	// compress at specific iterate of k.
+
+	private boolean was_first_change;// will be off each new letter we will read
+	// (at loop), will be true after first use at upgrade because of saving the changes if we will not use
+	// specific upgrade after that time
+
+	private int number_of_changes;// how much changes at each new letter we will
+									// read (at loop). counter
+
+	/*constructor*/
+	LZ77(int bits_of_max_sliding_window, int bits_of_look_a_head_buffer) {
+		
+		this.max_sliding_window = (int) Math.pow(2,(double) bits_of_max_sliding_window) - 1; //max_sliding_window,
+		//is 2 in the power of the input bits of window from the user.
+		
+		this.look_a_head_buffer = (int) Math.pow(2,(double) bits_of_look_a_head_buffer) - 1;//look_a_head_buffer,
+		//is 2 in the power of the input bits of look_a_head_buffer from the user.
+		
+		this.bits_of_look_a_head_buffer = bits_of_look_a_head_buffer;
+		
+		this.bits_of_max_sliding_window = bits_of_max_sliding_window;
+
+		// default values to global variables:
+		sliding_window = tmp_d = d = tmp_l = l = index_of_compressed_content_bytes_to_output_file = 0;
 
 	}
-	
-	
+
+	/*this method generates a text file that is optimal for our upgraded LZ77.
+	 * it makes sure there is no consecutive "errors", and also is pretty small.
+	 * so the indices are no more than 1 byte. */
 	public void Generate_String(String output_file_path) {
-		System.out
-				.println("hi this method geneartes strings with repetition with few mismatched symbols \n"
-						+ "for example: ababababfbabababgbab");
+		
 		StringBuilder str = new StringBuilder();
 		
-		double probabilty;
+		str.append("ab"); //making sure file will start with 'ab'.
 
-		for (int i = 0; i < 5000; i++) {
+		double probabilty;
+		
+		boolean error = false;
+
+		for (int i = 0; i < 120; i++) {
 			probabilty = Math.random();
-			if (probabilty > 0.1)
+			if ((probabilty > 0.3) || (error == false)) {
 				str.append('a');
-			else
-				str.append((char)(65+(Math.random()*35)));
+				error = true;
+			} else {
+				str.append((char) (33 + (Math.random() * 113)));
+				error = false;
+			}
 			probabilty = Math.random();
-			if (probabilty > 0.1)
+			if ((probabilty > 0.3) || (error == false)) {
 				str.append('b');
-		/*	else
-				str.append((char)(65+(Math.random()*35)));
-	*/	}
-		//System.out.println(str.toString());
-		String str_=str.toString();
-		byte [] generated_str=str_.getBytes();
+				error = true;
+			} else {
+				str.append((char) (33 + (Math.random() * 113)));
+				error = false;
+			}
+		}
+		
+		String str_ = str.toString();
+		
+		byte[] generated_str = str_.getBytes(); //byte array 
+		//we are sending to output file.
+		
 		try {
 			FileOutputStream fileOutputStream = new FileOutputStream(
 					output_file_path);
 			fileOutputStream.write(generated_str);
+			fileOutputStream.close();
 
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
@@ -97,17 +114,20 @@ public class LZ77 {
 			e1.printStackTrace();
 		}
 	}
-	
+
+	/*our implementation of classic LZ77.*/
 	public void Compress(String input_file_path, String output_file_path) {
 
+		File input_file = new File(input_file_path); // the input as file
 
-		File input_file = new File(input_file_path);
-
-		content_file_as_bytes = new byte[(int) input_file.length()]; 
+		content_file_as_bytes = new byte[(int) input_file.length()];
 
 		try {
 			FileInputStream fileInputStream = new FileInputStream(input_file);
-			fileInputStream.read(content_file_as_bytes); // reading all the file into content_file_as_bytes.
+			fileInputStream.read(content_file_as_bytes); // reading all the file into
+			// content_file_as_bytes.
+			fileInputStream.close();
+															
 
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
@@ -119,27 +139,35 @@ public class LZ77 {
 
 		compressed_content_bytes_to_output_file = new byte[(int) input_file.length() * 2];
 
+		/*loop that goes all through bytes of input file.*/
 		for (int j = 0; j < content_file_as_bytes.length; j++) {
+			
+			/*
+			 * the tuple will be as follows: (d,l,c), d is how far back to go, l
+			 * is how many characters to copy, c is the next character after that.
+			 */
 
-			c = (char) content_file_as_bytes[j];
+			c = (char) content_file_as_bytes[j]; //for now c gets the first byte.
+			
 			sliding_window = j;
-			if (sliding_window > 7)
-				sliding_window = 7;
+			if (sliding_window > max_sliding_window) //sliding window starts at 0 and grows until it reaches max.
+				sliding_window = max_sliding_window;
 
+			/*in this loop we are looking for the optimal d that will get us max l*/
 			for (int k = 0; k < sliding_window; k++) {
 				tmp_l = 0;
 				tmp_d = sliding_window - k;
-				int step_forward = 0;
+				int step_forward = 0;//step forward to use when we find a match.
 
-				while ((content_file_as_bytes[j + step_forward] == content_file_as_bytes[j
-						- tmp_d + step_forward])) {
+				/*while the char in our window matches to the current char go forward.*/
+				while ((content_file_as_bytes[j + step_forward] == content_file_as_bytes[j- tmp_d + step_forward])) {
 					tmp_l++;
 					step_forward++;
-					if ((j + step_forward >= content_file_as_bytes.length)
-							|| (step_forward >= look_a_head_buffer))
+					if ((j + step_forward >= content_file_as_bytes.length)|| (step_forward >= look_a_head_buffer))
 						break;
 				}
 
+				/*choosing max l.*/
 				if (tmp_l > l) {
 					l = tmp_l;
 					d = tmp_d;
@@ -151,20 +179,24 @@ public class LZ77 {
 
 			}
 
+			/*sending to a method that writes tuple to file.*/
 			AddTo_compressed_content_bytes_to_output_file(
 					compressed_content_bytes_to_output_file, d, l, c,
 					index_of_compressed_content_bytes_to_output_file);
+			
+		/*Incrementing index by 2. */
 			index_of_compressed_content_bytes_to_output_file = index_of_compressed_content_bytes_to_output_file + 2;
-			j = j + l;
+			
+			j = j + l; //j is now incremented by l that we copied from window.
 			l = 0;
 			d = 0;
-
 		}
 		try {
 			FileOutputStream fileOutputStream = new FileOutputStream(
 					output_file_path);
 			fileOutputStream.write(compressed_content_bytes_to_output_file, 0,
 					index_of_compressed_content_bytes_to_output_file);
+			fileOutputStream.close();
 
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
@@ -175,377 +207,380 @@ public class LZ77 {
 		}
 
 	}
+
 	
-	
-	public void CompressWithUpgrade(String input_file_path, String output_file_path, String upgrade_side_file_path) {
-		System.out.println("checcccccccccccccccc");
-//		System.out.println("Compress with upgrade");
-		File input_file = new File(input_file_path);
-		content_file_as_bytes = new byte[(int) input_file.length()]; 
+	public void CompressWithUpgrade(String input_file_path, String output_file_path) {
+		
+		/* initializing the local variables*/
+		
+		 int[] indexes_of_changes;	// here we keep all the indices of
+			//the letters we are replacing.
+		 
+		byte[] letters_to_save;	//here we keep all the letters
+		//that were changed.
+		
+		boolean use_the_upgrade; // gets value true if we finished the k iteration and we are going
+		// to use the upgrade
+		
+		File input_file = new File(input_file_path);	// the input
+		content_file_as_bytes = new byte[(int) input_file.length()];	 
 		compressed_content_bytes_to_output_file = new byte[(int) input_file.length() * 2];
-	//	specific_index_of_changes=0;
-		
 		indexes_of_changes = new int[(int) input_file.length()];
-		int indexesAtFinito=0;
-		int final_number_of_changes;
 		letters_to_save = new byte[(int) input_file.length()];
+		int indexesAtFinito=0; // counter for indexes_of_changes and letters_to_save_bytes.
+		int final_number_of_changes; // counter of all the changes at a specific
+		// iteration of j (when reading a new char).
 		
 		
-		try {
-			FileInputStream fileInputStream = new FileInputStream(input_file);
-			fileInputStream.read(content_file_as_bytes); // reading all the file into content_file_as_bytes.
-			
-			for(int i=0; i<content_file_as_bytes.length; i++) {
-				System.out.println("["+i+"]: " +(char) content_file_as_bytes[i]);
-			}
+		// reading the input:
+				try {
+					FileInputStream fileInputStream = new FileInputStream(input_file);
+					fileInputStream.read(content_file_as_bytes); // reading all the file into content_file_as_bytes.
+					fileInputStream.close();
 
-		} catch (FileNotFoundException e) {
-			System.out.println("File Not Found.");
-			e.printStackTrace();
-		} catch (IOException e1) {
-			System.out.println("Error Reading The File.");
-			e1.printStackTrace();
-		}
-	
-	//	System.out.println("Reading the text...");
-		
-		for (int j = 0; j < content_file_as_bytes.length; j++) {
-			
-			use_the_upgrade = /*optimate = */was_first_change=false; 
-			number_of_changes= final_number_of_changes=0;
-			
-			c = (char) content_file_as_bytes[j];
-			byte[] temp_save_char_after_switch = new byte[look_a_head_buffer+1];
-			byte[] save_old_char = new byte[look_a_head_buffer+1];
-			int[] temp_index_of_upgrade_= new int[look_a_head_buffer+1]; //all the indexes  we save inside k iterate if use upgrade - will change until end of k loop 	
-			byte[] temp_save_old_char= new byte[look_a_head_buffer+1];	// all the chars (before change) we save inside k iterate - will change until end of k loop 
-			byte[] save_char_after_twist = new byte[look_a_head_buffer+1];
-			int[] save_index_of_upgrade= new int[look_a_head_buffer+1]; // will save indexes about changes, each new letter will restart
-//			int temp_specific_index=0;
-			int tempOfFinalIndex=0;
-			byte tempOfFinalOldChar=0, tempOfFinalCharAfterTwist=0; 
-			boolean changeTheExtra=false;
-			
-			
-			
-			for (int i=0; i<look_a_head_buffer+1; i++) {
-				save_char_after_twist[i]= 0;
-				temp_save_char_after_switch[i] =0;
-				save_old_char[i] =0;
-				temp_save_old_char[i] = 0;
-				save_index_of_upgrade[i] =temp_index_of_upgrade_[i] = 0;  
-			}
-				
-			sliding_window = j;
-			if (sliding_window > 7)
-				sliding_window = 7;
-
-			System.out.println("we are reading index [" + j +"], it's \"" + c + "\", and our sliding window size is " + sliding_window + "\n");
-			
-			for (int k = 0; k < sliding_window; k++) {
-				number_of_changes=0;
-				for (int i=0; i<look_a_head_buffer+1; i++) {
-					temp_save_char_after_switch[i] =0;
-					temp_save_old_char[i] = 0;
-					temp_index_of_upgrade_[i] = 0;  
+				} catch (FileNotFoundException e) {
+					System.out.println("File Not Found.");
+					e.printStackTrace();
+				} catch (IOException e1) {
+					System.out.println("Error Reading The File.");
+					e1.printStackTrace();
 				}
-				
-			/*	if (optimate) {
-					break;
-				}*/
-				
-				tmp_l = 0;
-				tmp_d = sliding_window - k;
-				upgrade = false;
-				int step_forward = 0;
-				System.out.println("Checking copy from index[" + (j- tmp_d + step_forward) +"]");
-				System.out.println("we try to copy [" + (j- tmp_d + step_forward) +"]\"" + (char) content_file_as_bytes[j- tmp_d + step_forward] + "\" and we read \"" +
-						 (char) content_file_as_bytes[j + step_forward] + "\", so " + 
-								((content_file_as_bytes[j + step_forward] == content_file_as_bytes[j- tmp_d + step_forward])));
-				
-		
-				if (!(content_file_as_bytes[j + step_forward] == content_file_as_bytes[j- tmp_d + step_forward])) {
+
+				// j loop : each j will be a new letter we read
+				for (int j = 0; j < content_file_as_bytes.length; j++) {
+
+					// default values to the variables that we need at the loop:
+					use_the_upgrade = was_first_change = false;
+					number_of_changes = final_number_of_changes = 0;
+					c = (char) content_file_as_bytes[j];
+
+					// defining local variables of loop:
+
+					/*
+					 * we have 3 sets of arrays - temporary and final(save) for each set:
+					 * indexes, old chars and new bytes after each upgrade. temporary -
+					 * will change each new upgrade save - will change if we see that
+					 * last upgrade was optimal the size will be the size of
+					 * look_a_head_buffer because we want the size of the arrays will be
+					 * a little bit more then the maximum of change we can do at same
+					 * compress
+					 */
+
+					byte[] temp_save_char_after_switch = new byte[look_a_head_buffer]; // all the bytes (after changes)
 					
+					int[] temp_index_of_upgrade_ = new int[look_a_head_buffer]; // we save here all
+																				// the indices.
 					
-					if (j + step_forward+1 < content_file_as_bytes.length) { 
-						System.out.println("Because \""+(char) content_file_as_bytes[j+step_forward]+
-								"\"  unequal to \""  + (char) content_file_as_bytes[j- tmp_d + step_forward]
-										+"\" , now we need to check about upgrade,\n The next step of letter will is: copy: \"" +
-								(char) content_file_as_bytes[j - tmp_d + step_forward+1] + "\" and read: \"" + 
-										(char) content_file_as_bytes[j + step_forward+1] + "\" so it is " + 
-										(content_file_as_bytes[j + step_forward+1] == 
-										content_file_as_bytes[j - tmp_d + step_forward+1]) + " equal");
+					byte[] temp_save_old_char = new byte[look_a_head_buffer]; //we save here all the
+																			// bytes (before changes).
+					byte[] save_old_char = new byte[look_a_head_buffer];
+					byte[] save_char_after_twist = new byte[look_a_head_buffer];
+					int[] save_index_of_upgrade = new int[look_a_head_buffer];
+
+					// maybe we will need to change c (the variable) also, so we will
+					// use the next variables:
+					int tempOfFinalIndex = 0; // index of c.
+					byte tempOfFinalOldChar = 0; // c before change
+					byte tempOfFinalCharAfterTwist = 0; // c after change
+					boolean changeTheExtra = false; // gets value true if we need to use the change.
+
+					// initializing final (save) arrays:
+					for (int i = 0; i < look_a_head_buffer; i++) {
+						save_char_after_twist[i] = 0;
+						save_old_char[i] = 0;
+						save_index_of_upgrade[i] = 0;
+					}
+
+					// defining sliding window using j.
+					sliding_window = j;
+					if (sliding_window > max_sliding_window)//sliding window starts at 0 and grows until it reaches max.
+						sliding_window = max_sliding_window;
+
+					/* after all initializations, we are reading index [j], it's variable c, and we
+					start the loop of sliding window:*/
+
+					for (int k = 0; k < sliding_window; k++) {
+
+						// initializing values to local variables, for checking optimal copying from window.
+						number_of_changes = 0;
+						tmp_l = 0;
+						tmp_d = sliding_window - k;
+						upgrade = false;
+						int step_forward = 0; //step forward to use when we find a match.
+
+						// initializing values to the temporary arrays:
+						for (int i = 0; i < look_a_head_buffer; i++) {
+							temp_save_char_after_switch[i] = 0;
+							temp_save_old_char[i] = 0;
+							temp_index_of_upgrade_[i] = 0;
+						}
+						
+						/*checking if the char in our window doesn't match to the current char.*/
+
+						if (!(content_file_as_bytes[j + step_forward] == content_file_as_bytes[j
+								- tmp_d + step_forward])) { // if its not equal
+							if (j + step_forward + 1 < content_file_as_bytes.length) { // checking that
+													// we are not in the last letter of the file.
+								
+								/*
+								 * if we are here it means that the char in our window
+								 * doesn't match to the current char
+								 * so now we need to check if 'upgrade' will be useful:
+								 * we will do this by checking the next letter: so we need to check if the
+								 * char we will copy:
+								 * (char) content_file_as_bytes[j -tmp_d + step_forward+1] 
+								 * is equal to the char we are
+								 * reading (char) content_file_as_bytes[j +step_forward+1]
+								 */
+						
 					
 						if ((content_file_as_bytes[j + step_forward+1] == content_file_as_bytes[j - tmp_d + step_forward+1])) {
-							System.out.println("And because its equal, we send it to check upgrade");
+							// if its equal, we send it to check upgrade.
 							
-							boolean saveFirst = was_first_change;
-							byte charBeforeChange = content_file_as_bytes[j + step_forward];
+							byte charBeforeChange = content_file_as_bytes[j + step_forward];  // we save the char we read.
 							
+							// we send it to check copy and save the values:
 							checkIfUpgrade(tmp_l, step_forward, j, temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch,  save_old_char, save_index_of_upgrade, save_char_after_twist);
+							putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward);
 							
-							if (upgrade) {
-								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward, saveFirst);
-								
-							}
-
 						}
 					}	
 				}
 				
+				/*  important ! if boolean upgrade is true, it just say means that we may use it, we still didn't compress
+				*	nothing.
+				*	if upgrade was true, so until the end of iteration, there is a change at content-file, so the next while-loop use it.
+				*/		
 				
 				while ((content_file_as_bytes[j + step_forward] == content_file_as_bytes[j
 						- tmp_d + step_forward])) {
 					
-					boolean loopWithUpgrade = upgrade;
-					tmp_l++;
-					step_forward++;
+					// while the byte we read is equal to the byte we copy
 					
 					
+					tmp_l++;						   // adding one to tmp_l that may change l 
+					step_forward++;						// adding one to step_forward to check our next copy
 					
-					
-					if ((j + step_forward >= content_file_as_bytes.length)
+					// if we finished the look_a_head_buffer or finished reading the bytes
+					if ((j + step_forward >= content_file_as_bytes.length)  
 							|| (step_forward >= look_a_head_buffer))
 						break;
 					
+					/*
+						we are checking if the byte we read: content_file_as_bytes[j + step_forward],
+						is equal to the byte we try to copy: content_file_as_bytes[j- tmp_d + step_forward]
+					*/
 					
-					
-					// added today
-					System.out.println("index: [" + (j + step_forward) + "]: we try to copy \"" + (char) content_file_as_bytes[j- tmp_d + step_forward] +
-							"\" (at indexOfSlidingWindow: ["+ (j-tmp_d+step_forward)+"]),  and we read \"" +
-					 (char) content_file_as_bytes[j + step_forward] + "\", so " + 
-							((content_file_as_bytes[j + step_forward] == content_file_as_bytes[j- tmp_d + step_forward])));
-				
-					
-					// end today
-					
+					if (!(content_file_as_bytes[j + step_forward] == content_file_as_bytes[j- tmp_d + step_forward])) { // if its not equal		
+						 if (j + step_forward+1 < content_file_as_bytes.length) { // if we are not in the last byte of file
+							 
+							 /* if we are here, it's mean that The next byte we read is content_file_as_bytes[j+step_forward],
+							  *  and it's unequal to content_file_as_bytes[j- tmp_d + step_forward],
+							  *  so now we need to check about upgrade, 
+							  *  the next step of letter is: copy: content_file_as_bytes[j - tmp_d + step_forward+1], 
+							  *  							read: content_file_as_bytes[j + step_forward+1]    
+							  */
 						
-					if (!(content_file_as_bytes[j + step_forward] == content_file_as_bytes[j- tmp_d + step_forward])) {
-				
-						
-				
-						 if (j + step_forward+1 < content_file_as_bytes.length) { 
-							System.out.println("The next letter is \""+(char) content_file_as_bytes[j+step_forward]+
-									"\" and it's unequal to \""  + (char) content_file_as_bytes[j- tmp_d + step_forward]
-											+"\" so now we need to check about upgrade,\n the next step of letter is: from sliding_window: \"" +
-									(char) content_file_as_bytes[j - tmp_d + step_forward+1] + "\" and will read: \"" + (char) content_file_as_bytes[j + step_forward+1] 
-											+ "\" so it is " + (content_file_as_bytes[j + step_forward+1] == content_file_as_bytes[j - tmp_d + step_forward+1]) + " equal");
-						
-							if ((content_file_as_bytes[j + step_forward+1] == content_file_as_bytes[j - tmp_d + step_forward+1])) {
-								System.out.println("And because its equal, we send it to check upgrade");
+							if ((content_file_as_bytes[j + step_forward+1] == content_file_as_bytes[j - tmp_d + step_forward+1])) {								
+								 // if we are here its mean that the next step of bytes are equals, so we need to check upgrade
 								
-								byte charBeforeChange = content_file_as_bytes[j + step_forward];
-								boolean saveFirst = was_first_change;
-								boolean saveIfUpgrade = loopWithUpgrade;
+								byte charBeforeChange = content_file_as_bytes[j + step_forward];  // save the char we read
+								
+								//send to check if it will be good to use upgrade:
 								checkIfUpgrade(tmp_l, step_forward, j, temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch,  save_old_char, save_index_of_upgrade, save_char_after_twist);
-							
-								  if (upgrade) {
-									  
-									 putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward, saveFirst);
-								}
-								  else if (saveIfUpgrade) {
-									  upgrade = true;
-								  }
+								// save values
+								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward);							
 							}
 						}	
 					}
 					
 				} // end while
 				
-				
-				
-				if ( (tmp_l > l) ||   ( (tmp_l==l) && (!upgrade) && (tmp_l>0) ) ){
-					System.out.println("tmp_l: " + tmp_l + ", l: " + l + ", upgrade= " + upgrade);
-					
-					if (j+step_forward<content_file_as_bytes.length) {
+				if ( (tmp_l > l) || ( (tmp_l==l) && (!upgrade) && (tmp_l>0) ) || ((tmp_l==l) && (upgrade) && (tmp_l>0) && (final_number_of_changes>number_of_changes) ) ){
+
+					/* if we found optimal compressed at that iteration: tmp_l bigger then l.
+						--	or tmp_l equal to l but not use the upgrade - we prefer use the usual lz_77 if it the same 
+								l because the upgrade are use more bytes at compressed file
+					 	--	or we prefer use compression with much less changes because each change is more size of compressed file
+					 	*/
+					if (j+step_forward<content_file_as_bytes.length) { // if we still not finished to read
+						// we save the values of the next char, that going to be at c variable
 						tempOfFinalIndex = j+step_forward;
 						tempOfFinalOldChar = content_file_as_bytes[j+step_forward];
 						tempOfFinalCharAfterTwist =  content_file_as_bytes[j - tmp_d + step_forward];
 					}
 					
 					if (j + step_forward + 1 <= content_file_as_bytes.length)    {
-						
 						if ( content_file_as_bytes[j - tmp_d + step_forward]  != content_file_as_bytes[j + step_forward]) {
-							changeTheExtra=true;
-							c = (char) content_file_as_bytes[j - tmp_d + step_forward] ;
+							// we are here if we need to use upgrade on c - to change the next byte to the next byte we would copy 
 							
-							
-				/*			save_old_char[0] = content_file_as_bytes[j + step_forward];
-							save_index_of_upgrade[0] = j + step_forward;	
-							save_char_after_twist[0] =content_file_as_bytes[j - tmp_d + step_forward];
-							//content_file_as_bytes[temp_index_of_upgrade_[i]] = save_old_char[i];
-					*/		
+							changeTheExtra=true; // we say to computer that we used upgrade to c , so we will save all 
+													//the values at the array of upgrade at the end of compress
+							c = (char) content_file_as_bytes[j - tmp_d + step_forward] ; // we save c as the next byte we would copy	
 						}
 						
-						else {
+						else { // else c will take char as usual lz_77
 							c = (char) content_file_as_bytes[j + step_forward];	
-						}
-						
-						
-					}
-						
-						
-					else
+						}				
+					}	
+					
+					else	// if we finished read the file
 						c = ' ';
 					
-					
-					
-					
 					if (upgrade) {
+						// if we found optimal compress and upgrade was in use:
 						
-						
-						//if (was_first_change) {
-			//				specific_index_of_changes = temp_specific_index;
+						final_number_of_changes = number_of_changes; // we save the number of changes
+						use_the_upgrade=true; 						// we turn on use_the_upgrade so the computer know to use it at the end of loop
 
-
-						final_number_of_changes = number_of_changes;
-	//					temp_specific_index = specific_index_of_changes;
-						use_the_upgrade=true;
 						for (int i=0; i<number_of_changes; i++) {
+							// we save the values that was at temp-arrays to save-arrays:
 							save_old_char[i] = temp_save_old_char[i];
 							save_index_of_upgrade[i] = temp_index_of_upgrade_[i];	
 							save_char_after_twist[i] = temp_save_char_after_switch[i];
-							content_file_as_bytes[temp_index_of_upgrade_[i]] = save_old_char[i];
 							
-							 
-							
-							
-					/*		System.out.println("upgrading....:  \nold char[" + i +"] "+(char) temp_save_old_char[i]
-							+", save_index_of_upgrade[" + i +"] \" = " + temp_index_of_upgrade_[i]);
-							
-							 deleted today: it was inside print
-							+ ", save_char_after_twist[i] = "+
-									(char) temp_save_char_after_switch[i]);
-							*/
+							// because we stilln't finished checking optimal compress, we back the content-file to how it was before last changes
+							content_file_as_bytes[temp_index_of_upgrade_[i]] = save_old_char[i];  
 						}
 					}
 					
-					else {
-						use_the_upgrade = false;
-//						specific_index_of_changes = temp_specific_index;
-					//	final_number_of_changes=1;
-						if (was_first_change) {
+					else { // if we found optimal compress and upgrade was not in use:
+						use_the_upgrade = false; // we turn off use_the_upgrade so the computer not use it at the end
+
+						if (was_first_change) { // if we changed already someting at conten-file, we return it:
 							for (int i=0; i<number_of_changes; i++) {							
 								content_file_as_bytes[temp_index_of_upgrade_[i]] = temp_save_old_char[i];
 							}
 						}
 					}
-					
+				
 					l = tmp_l;
-					d = tmp_d;
-
-					
-					System.out.println("we will save that's k [" + (k+1) +"] as: ("+d+", " + l + ", " + c +")");
-					
+					d = tmp_d;	
+					// and for now we have optimal (d, l ,c) 
 				}
-				else if (was_first_change) {
+				
+				
+				
+				else if (was_first_change) { // if we finished iteration, we changed something but at the end we are not use it, we return it:
 					for (int i=0; i<number_of_changes; i++) {							
 						content_file_as_bytes[temp_index_of_upgrade_[i]] = temp_save_old_char[i];
 					}
 				}
 				
-				// added today
-				if (step_forward >= look_a_head_buffer) {
+				if (step_forward >= look_a_head_buffer) { // if step_forward used all the look_a_head_buffer we will not continue loop
 					break;
-				}
-				// ended today
-			} // end k
+				}	
+			} // end k (loop of sliding window)
 			
-			if (use_the_upgrade) {
-				System.out.println("We use upgrade:");
-				
+			if (use_the_upgrade) { 
+				/* 
+				 * if the optimal compressed we found was with upgrade, we will change the 
+				 *  content_file as upgrade and save values at the final array of upgrade 
+				*/ 
+					
 				for (int i=0; i<final_number_of_changes; i++) {
 					content_file_as_bytes[save_index_of_upgrade[i]] =save_char_after_twist[i];	
 				}
 				
-				
-				System.out.println("we finish k and we use the upgrade");
-				
 				for (int i=0; i<final_number_of_changes; i++) {
-					
-					/*
-					indexes_of_changes[specific_index_of_changes] = save_index_of_upgrade[i];
-					letters_to_save[specific_index_of_changes] = save_old_char[i];
-					*
-					*/
 					
 					indexes_of_changes[indexesAtFinito] = save_index_of_upgrade[i];
 					letters_to_save[indexesAtFinito] = save_old_char[i];
 					
-					System.out.println("we save upgrade: at index [" + indexes_of_changes[indexesAtFinito]
-							+ "], its now: \"" + (char) save_char_after_twist[i] + "\", we will change to \"" + (char) letters_to_save[indexesAtFinito] + "\"");
-					
+					/*
+					 * we save upgrade: at index [indexes_of_changes[indexesAtFinito]] its now: save_char_after_twist[i]
+					 * and the decompressed will change it at the specific index to letters_to_save[indexesAtFinito]. 
+					 */
 					indexesAtFinito++;
-					
-					
 				}
-				
-				
 			}
 			
-			if (changeTheExtra) {
-				System.out.println("We use changeExtra:");
-				
-				
-				
-				
+			if (changeTheExtra) { 
+				/* if we used upgrade also for c, we will change the content_file as upgrade 
+				 * and save values at the final array of upgrade 
+				 */
 				content_file_as_bytes[tempOfFinalIndex] =tempOfFinalCharAfterTwist;	
-				
 				indexes_of_changes[indexesAtFinito] = tempOfFinalIndex;
 				letters_to_save[indexesAtFinito] = tempOfFinalOldChar;
-				
-				
 
-
-				
-				
-				System.out.println("we save upgrade: at index [" + indexes_of_changes[indexesAtFinito]
-						+ "], its now: \"" + (char) content_file_as_bytes[tempOfFinalIndex]  + "\", we will change later to \"" + (char) letters_to_save[indexesAtFinito] + "\"");
-				
+				/* we save upgrade: at index [indexes_of_changes[indexesAtFinito]]
+				 * its now: tempOfFinalCharAfterTwist, we will change later to tempOfFinalOldChar 
+				 * at specific index
+				 */
 				indexesAtFinito++;
-				changeTheExtra=false;
-			}
-			
-			
-			else {
-		//		System.out.println("we dont use upgrade");
+				changeTheExtra=false; // we turn back the changeTheExtra
 			}
 
+			// we send the values to compress
 			AddTo_compressed_content_bytes_to_output_file(
 					compressed_content_bytes_to_output_file, d, l, c,
 					index_of_compressed_content_bytes_to_output_file);
 			index_of_compressed_content_bytes_to_output_file = index_of_compressed_content_bytes_to_output_file + 2;
+			
+			// and we will continue to the next iteration with refresh values:
 			j = j + l;
 			l = 0;
 			d = 0;
 
-		}
+		} // end of j loop - the chars we read
 		
 		try {
-			FileOutputStream fileOutputStream = new FileOutputStream(
-					output_file_path);
+			// after we finished reading the file, write the compress file
+			FileOutputStream fileOutputStream = new FileOutputStream(output_file_path);
 			DataOutputStream out = new DataOutputStream(fileOutputStream);
 			
-			/*int count =0;
-			for (int i = 0; i < indexes_of_changes.length; i++) {
-				if ( (i>0) && (indexes_of_changes[i] == 0)) {
-					break;
-				}
-				count++;
-			}*/
+			/*writing to beginning of file the indices and letters that were changed.*/
 			
-			System.out.println("Decompress with that changes: ");
-		    out.writeInt(indexesAtFinito*3);
-			for (int i = 0; i < indexesAtFinito; i++) {
-				
-				System.out.println("at index: [" + indexes_of_changes[i] + "] change to \"" + (char) letters_to_save[i] + "\"");
-				
-				out.writeShort(indexes_of_changes[i]);
-				out.writeByte(letters_to_save[i]);
+			/*we check the size of file, if the file is under 256 bytes for example,
+			 *we can use 1 byte only for each index.*/
+			if(content_file_as_bytes.length <= 256){
+		    out.writeInt(indexesAtFinito*2);//writing for the decompressor how much of beginning of file
+		    // is related to the letters to fix and nor regular compressed data.
+		    
+		    out.writeByte(1);//writing if we are using 1,2,3 or 4 bytes for indices.
+		    
 			}
-			//long l=fileOutputStream.getChannel().position();
+			else if(content_file_as_bytes.length <= 65536){
+				out.writeInt(indexesAtFinito*3);//writing for the decompressor how much of beginning of file
+			    // is related to the letters to fix and nor regular compressed data
+				
+			    out.writeByte(2);//writing if we are using 1,2,3 or 4 bytes for indices.
+			}
+			else if(content_file_as_bytes.length <= 16777216){
+				out.writeInt(indexesAtFinito*4);//writing for the decompressor how much of beginning of file
+			    // is related to the letters to fix and nor regular compressed data.
+				
+			    out.writeByte(3);//writing if we are using 1,2,3 or 4 bytes for indices.
+			}
+			else{
+				out.writeInt(indexesAtFinito*5);//writing for the decompressor how much of beginning of file
+			    // is related to the letters to fix and nor regular compressed data.
+				
+			    out.writeByte(4);//writing if we are using 1,2,3 or 4 bytes for indices.
+			}
+			
+			
+			for (int i = 0; i < indexesAtFinito; i++) {//writing all the indices and letters that we wll fix later.
+				
+				
+				if(content_file_as_bytes.length <= 256) //writing index.
+				    out.writeByte(indexes_of_changes[i]);
+				
+				else if(content_file_as_bytes.length <= 65536)//writing index.
+					out.writeShort(indexes_of_changes[i]);
+				
+				else if(content_file_as_bytes.length <= 16777216){//writing index.
+					byte[] b=ByteBuffer.allocate(4).putInt(indexes_of_changes[i]).array();
+					out.write(b, 1, 3);
+				}
+				else                                     //writing index.
+					out.writeInt(indexes_of_changes[i]);
+				
+				out.writeByte(letters_to_save[i]);      //writing letter.
+			}
 			fileOutputStream.write(compressed_content_bytes_to_output_file, 0,
 					index_of_compressed_content_bytes_to_output_file);
+			fileOutputStream.close();
 
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
@@ -554,300 +589,112 @@ public class LZ77 {
 			System.out.println("Error Writing The File.");
 			e1.printStackTrace();
 		}
-		
-		for (int i=0; i< indexes_of_changes.length; i++) {
-			System.out.println((i+1) + ". at index: " + indexes_of_changes[i] + ", change to " + (char) letters_to_save[i]);
-
-			if ((indexes_of_changes[i] == 0) && (i > 0) ) {
-				break;
-			}
-		}
-	}
-	
-	
-	
+	}  // end of method.
 	
 	private void checkIfUpgrade(int l_, int step_forward_, int j_, int[] temp_index_of_upgrade_, byte[] temp_save_old_char, 
 			byte[] temp_save_char_after_switch, byte[] save_old_char, int[] save_index_of_upgrade, byte[] save_char_after_twist) {
 
-		byte old_char_of_iterate=content_file_as_bytes[j_ + step_forward_];
+		/*
+		 * this function is called when there is an option to upgrade,
+		 * we will change the content text and check if it is optimal at the end of current iteration. if it is, we will keep the change
+		 * of text, else - we will change back the text
+		 */
+		
+		// saving the variables we are going to change.
 		byte char_after_switch_of_iterate = content_file_as_bytes[j_- tmp_d + step_forward_];
-		int temp_index_of_iterate = j_+step_forward_;
+		content_file_as_bytes[j_ + step_forward_] = char_after_switch_of_iterate; // change the content
 		
-		
-		int added_to_l = 0;
+			/* so we sent the byte content_file_as_bytes[j_+step_forward_] to check if we will switch it to
+			 *  char_after_switch_of_iterate, at thats specific index of the source input it will be better then do it as 
+			 *  usual_lzz
+			 * So for temp, at index[temp_index_of_iterate] we get char_after_switch_of_iterate  
+			 */
 
-		
-		if (char_after_switch_of_iterate == 0) {
-			System.out.println("here is the 0, we are at function");
-		}
-		
-		content_file_as_bytes[j_ + step_forward_] = char_after_switch_of_iterate;
-		
-	/*	System.out.println("Checkimg upgrade.....");
-		System.out.println("We sent the char \"" + (char) old_char_of_iterate + "\" to check if we will switch her to \""
-				+ (char) char_after_switch_of_iterate + "\" at index " + temp_index_of_iterate + " of the source input it will be better then do it as "
-						+ "usual lz77");
-		*/
-		System.out.println("So for temp, at index["+temp_index_of_iterate+"] we get \"" + (char) char_after_switch_of_iterate+"\"");
-		
 		do {
-			added_to_l++;
+			// becuase we know that the change of content-file makes one true copy, we use do-while loop for checking the next bytes
 			step_forward_++;
-
-	//		System.out.println("the length is :" + content_file_as_bytes.length + " and j+step is: " + (j_+step_forward_));
+			
 				if ((j_ + step_forward_+1 >= content_file_as_bytes.length)|| (step_forward_ >= look_a_head_buffer)) {
-					
-			//		added_to_l=3;
-					
-						// added thirday
-					
-					/*if (number_of_changes>0) {
-						if (temp_index_of_upgrade_[number_of_changes-1] != temp_index_of_iterate) {
-							temp_save_old_char[number_of_changes]=old_char_of_iterate;
-							temp_index_of_upgrade_[number_of_changes]=temp_index_of_iterate;	
-							//deleted thirday temp_save_char_after_switch[number_of_changes]=char_after_switch_of_iterate;
-							number_of_changes++;
-							
-							System.out.println("We saving at upgradeArray \"" + (char) old_char_of_iterate + "\" at index [" + temp_index_of_iterate+"]");
-						}
-					}*//*
-					else {
-						temp_save_old_char[number_of_changes]=old_char_of_iterate;
-						temp_index_of_upgrade_[number_of_changes]=temp_index_of_iterate;	
-						//deleted thirday temp_save_char_after_switch[number_of_changes]=char_after_switch_of_iterate;
-						number_of_changes++;
-						
-						System.out.println("We saving at upgradeArray \"" + (char) old_char_of_iterate + "\" at index [" + temp_index_of_iterate+"]");
-					}*/
-		
-					// end thirday
-					
-		//			System.out.println("we see that the switch was good! because we finished to compress");
-				//	optimate=true;
+					// if we finished read the file or finished look_a_buffer
 					break;
 				}
 				
-				System.out.println("(still checking):\n"
-						+ "reading index["+(step_forward_+j_)+"], it's \" " +(char) content_file_as_bytes[step_forward_+j_] +
-						"\", sliding_window is at index[ "+(j_- tmp_d + step_forward_)+"], so will copy \""+
-				(char) content_file_as_bytes[j_- tmp_d + step_forward_] + "\", so "+(content_file_as_bytes[j_ + step_forward_] ==
-				content_file_as_bytes[j_- tmp_d + step_forward_]));
-			 	
-
+				/* 	the next lines will do the same as at the compressWithUpgrade method, that check if we need to use
+				  	upgrade again - at recursion at the upgrade that we are in it
+				  */
 				
 				if (!(content_file_as_bytes[j_ + step_forward_] == content_file_as_bytes[j_- tmp_d + step_forward_])) {
-					
 					if (j_ + step_forward_+1 < content_file_as_bytes.length) {  
-						
-						System.out.println("The next letter is \""+(char) content_file_as_bytes[j_+step_forward_]+
-								"\" and it's unequal to \""  + (char) content_file_as_bytes[j_- tmp_d + step_forward_]
-										+"\" so now we need to check about upgrade,\n the next step of letter is: copy: \"" +
-								(char) content_file_as_bytes[j_ - tmp_d + step_forward_+1] + "\" and read: \"" + (char) content_file_as_bytes[j_ + step_forward_+1] 
-										+ "\" so it is " + (content_file_as_bytes[j_ + step_forward_+1] == content_file_as_bytes[j_ - tmp_d + step_forward_+1]) + " equal");
-				
 						if ((content_file_as_bytes[j_ + step_forward_+1] == content_file_as_bytes[j_ - tmp_d + step_forward_+1])) {
-							System.out.println("And because its equal, we send it to check upgrade");
 							
+							// saving values..
 							int temp_step = step_forward_;
 							int temp_j = j_;
-							
-						//	byte savingNewChar = content_file_as_bytes[j_- tmp_d + step_forward_]; // if we change
 							byte charBeforeChange = content_file_as_bytes[j_+step_forward_]; // if we will not change
-						//	int savingNowIndex = (j_+step_forward_);
 							
-							boolean saveIfUpgraded = upgrade;
-							checkIfUpgrade(tmp_l, temp_step, temp_j, temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch , save_old_char, save_index_of_upgrade, save_char_after_twist);
-							
-							
-							
-							if (upgrade) {
-								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j_, step_forward_, true);
-								
-							}
-							else if (saveIfUpgraded) {
-								upgrade=true;
-							}
+							// recursion:
+							checkIfUpgrade(tmp_l, temp_step, temp_j, temp_index_of_upgrade_, 
+									temp_save_old_char, temp_save_char_after_switch , save_old_char, save_index_of_upgrade, save_char_after_twist);
+							// save values:
+								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char,
+										save_index_of_upgrade, save_char_after_twist, charBeforeChange, j_, step_forward_);
 						}
-					}	
-					
+					}						
 				}
 				
-				// end added today
-				
 		} while ((content_file_as_bytes[j_ + step_forward_] == content_file_as_bytes[j_- tmp_d + step_forward_]));
-		
-		if (added_to_l > 2){
+		 
+			/*
+			 * finished upgrade
+			 */
 		
 			upgrade = true;
-			System.out.println("was_first is now true");
 			was_first_change=true;
 			
-			System.out.println("upgrade is true - we change the letters: "
-					+ "at index[" +temp_index_of_iterate+"] we get \"" + (char) char_after_switch_of_iterate+"\"");
-
-		
-			
-		}
-		else {
-			upgrade = false;
-			
-			if (old_char_of_iterate ==0) {
-				System.out.println("we still at function and it 0 going back to content text");
-			}
-			
-			
-			content_file_as_bytes[temp_index_of_iterate] = old_char_of_iterate;
-			System.out.println("Upgrade is false. we back the index [" +temp_index_of_iterate+"] to \"" + (char)old_char_of_iterate );
-		}
-			
+			// upgrade is true - we change the letters: at index[temp_index_of_iterate] we get char_after_switch_of_iterate
 	}
 	
-	
-	
-	
-
-	/*
-	void buildLonelyString() {
-		
-		int[] frequency_of_letter = new int[127]; // as ASCI
-		//boolean[] usedLetter = new boolean[127];
-		
-		for (int i=0; i<127; i++) {
-			frequency_of_letter[i] = 0;
-			//usedLetter[i] = false;
-		}
-		
-		for (int i=0; i<content_file_as_bytes.length; i++) {
-			frequency_of_letter[(int) content_file_as_bytes[i]]++;
-		}
-		
-		for (int i=0; i<content_file_as_bytes.length; i++) {
-			if (frequency_of_letter[(int) content_file_as_bytes[i]] == 1) {
-				lonelyLetters += (char) content_file_as_bytes[i];
-			}
-		}
-		System.out.println("-------------------lonelyString: " + lonelyLetters);
-	}
-	
-	*/
 	private void AddTo_compressed_content_bytes_to_output_file(byte[] compressed_content_bytes_to_output_file, int d, int l,
 														int c, int index) {
+		/*in this function we combine the d and l into 1 byte,
+		 *and add this byte and c byte to compressed_content_bytes_to_output_file. */
 
 		String d_str = Integer.toBinaryString(d);
-		while (d_str.length() < 8) {
+		while (d_str.length() < 8) { //padding with '0' if needed
 			d_str = "0" + d_str;
 		}
 		String l_str = Integer.toBinaryString(l);
-		while (l_str.length() < 8) {
+		while (l_str.length() < 8) {//padding with '0' if needed
 			l_str = "0" + l_str;
 		}
-		String d_l_str = d_str.substring(5, 8) + l_str.substring(3, 8);
+		//combining the d and l
+		String d_l_str = d_str.substring(bits_of_look_a_head_buffer, 8) + l_str.substring(bits_of_max_sliding_window, 8);
 		int d_l_int = Integer.parseUnsignedInt(d_l_str, 2);
 		byte d_l_byte = (byte) d_l_int;
+		
 		byte c_byte = (byte) c;
+		
 		compressed_content_bytes_to_output_file[index] = d_l_byte;
 		compressed_content_bytes_to_output_file[index + 1] = c_byte;
 		
+		//printing for user.
 		System.out.println("-----------(" + d + ", " + l + ", " + (char) c + ")---------------");
 	}
-	
-/*	
-	void addTo_with_upgrade ( byte[] compressed_with_upgrade_content_bytes_to_output_file,int d,int l, char c,
-			int j, int step_read, int index_of_compressed_content_bytes_to_output_file_with_upgrade){
-		System.out.println("\nIn AddTo with upgrade...\nstep_index= " + step_index_toUpgrade_byte_array + " index_of_compres...: " +
-				index_of_compressed_content_bytes_to_output_file_with_upgrade);
-		
-		int how_many_indexes_to_casting=4, index_of_bit_at_content_text = j+step_read;
-		
-		if (index_of_bit_at_content_text <= 127) {
-			how_many_indexes_to_casting = 1;
-		}
-		else if (index_of_bit_at_content_text <= 32767) {
-			how_many_indexes_to_casting = 2;
-		}
-		else if (index_of_bit_at_content_text <= 8388607) {
-			how_many_indexes_to_casting = 3;
-		}
-		System.out.print(" we'll add " + how_many_indexes_to_casting + " indexes of numberOfBit\n");
-		
-		
-		
-		ByteBuffer b = ByteBuffer.allocate(4);
-		b.putInt(index_of_bit_at_content_text);
-		System.out.println("the index of this char is " + index_of_bit_at_content_text + ", the byte is:");
-		byte c_byte = (byte) c;
-		int index=0;
-		for (int i=3; index<how_many_indexes_to_casting; i--) {
-			compressed_with_upgrade_content_bytes_to_output_file[index_of_compressed_content_bytes_to_output_file_with_upgrade+index] 
-					= b.array()[i];
-			index++;
-			System.out.print((index-1) + ": " +b.array()[i] + " , ");
-		}
-		compressed_with_upgrade_content_bytes_to_output_file[index_of_compressed_content_bytes_to_output_file_with_upgrade+
-		                                                     how_many_indexes_to_casting] = c_byte;
-		step_index_toUpgrade_byte_array += (how_many_indexes_to_casting+1);
-		System.out.println(" \nstep_index: " + step_index_toUpgrade_byte_array + ", char: " + (char) c + "\nfinish addToWith\n\n");
-		write_to_upgrade_file = true;
-		
-		System.out.println("--------(we added: index: " + index_of_bit_at_content_text + " the char " + (char) c + "-------)");
-	}
-	
-	
-	void checkCompress(int j, int step_read, int step_copy) {
-		System.out.println("Checking regular compress...");
-		if (content_file_as_bytes[j + step_read] == content_file_as_bytes[j - tmp_d + step_copy]){
-			usual_lz77 = true;
-			upgrade = false;
-		}
-		else {
-			usual_lz77 = false;
-		}
-		System.out.println("\n" + (j+1+step_read) + "'st letter, so now we read: " + (char) content_file_as_bytes[j + step_read]
-				+ ", and we copy " + (char) content_file_as_bytes[j - tmp_d + step_copy] + ", so usual_lzz= "
-				+ (content_file_as_bytes[j + step_read] == content_file_as_bytes[j - tmp_d + step_copy]));
-	}
-	
-	void checkCompressWithUpgrade(int j, int step_read, int step_copy){
-		boolean isLetterAtLonelyString = false;
-		
-		System.out.println("Checking upgrade compress...");
-		
-		for (int i=0; i<lonelyLetters.length(); i++) {
-			if (content_file_as_bytes[j + step_read] == lonelyLetters.charAt(i)) {
-				isLetterAtLonelyString = true;
-			}
-		}
-		
-		if ( (content_file_as_bytes[j + step_read+1] == content_file_as_bytes[j - tmp_d + step_copy+1]) &&
-				(isLetterAtLonelyString)) {
-			upgrade = true;
-		}
-		else
-			upgrade=false;
-		
-		System.out.println("After we know that usual_lzz=" +usual_lz77 	+ ",\n we see that the letter after thats letter is " + 
-		(char) content_file_as_bytes[j + step_read+1] + ",\n and because we copy the next letter- " +
-					(char)content_file_as_bytes[j - tmp_d + step_copy+1] + ", and becuase it " + isLetterAtLonelyString + " that "
-							+ "it is in our lonelyString,  so upgrade= " + 	(upgrade) );
-	}
-	*/
+
 	
 	public void Decompress(String input_file_path, String output_file_path) {
-		File input_file = new File(input_file_path);
+		File input_file = new File(input_file_path); // the input_file as file
 		
-		/*
-		 * Array of all the bytes of the file.
-		 */
 		
+		//array of all the compressed bytes from input.
 		byte[] compressed_file_as_bytes = new byte[(int) input_file.length()];
 		
 		try {
 			FileInputStream fileInputStream = new FileInputStream(input_file);
 			fileInputStream.read(compressed_file_as_bytes); // reading all the
-															// file
-															// into
-															// compressed_file_as_bytes.
+															// file into compressed_file_as_bytes.
+			fileInputStream.close();
+			
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
 			e.printStackTrace();
@@ -856,24 +703,37 @@ public class LZ77 {
 			e1.printStackTrace();
 		}
 		
-		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file.length() * 100];
+		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file.length() * 100];//array
+		//that will hold all the decompressed bytes.
 		
-		int index_of_returned_original_bytes = 0;
+		int index_of_returned_original_bytes = 0; //initializing index.
 		
-		for (int j = 0; j < compressed_file_as_bytes.length; j++) {
-			d = (int) compressed_file_as_bytes[j];
-			d = d << 24;
+		for (int j = 0; j < compressed_file_as_bytes.length; j=j+2) {
+			
+			d = (int) compressed_file_as_bytes[j]; //reading byte
+			
+			/*we shift the byte left 24 bits and right 24 bits,
+			 *to get rid of '1' that make the integer negative.*/
+			d = d << 24; 
 			d = d >>> 24;
-			d = d >>> 5;
-			l = (int) compressed_file_as_bytes[j];
-			l = l << 27; // 32-3
-			l = l >>> 27;//32-3
-		//	System.out.println("d is: "+d+" l is: "+l);
-
+			
+			d = d >>> bits_of_look_a_head_buffer;//shifting right number of bits of look a head buffer,
+		//so what is left is just the window.
+		
+			l = (int) compressed_file_as_bytes[j]; //reading byte
+			
+			/*we shift the byte left 24 bits + bits of window and right 24 bits+ bits of window,
+			 *to get rid of '1' that make the integer negative and to get rid of bits of window,
+			 *so what is left is just look a head buffer.*/
+			l = l << 24+bits_of_max_sliding_window; 
+			l = l >>> 24+bits_of_max_sliding_window;
+		
+			/*if we don't copy from window, just write the c byte that is next.*/
 			if (d == 0) {
 				returned_original_bytes_to_output_file[index_of_returned_original_bytes] = compressed_file_as_bytes[j + 1];
 				index_of_returned_original_bytes++;
-			} else {
+				
+			} else { /*copy the length specified from window, than write the c byte that is next. */
 				while (l > 0) {
 					returned_original_bytes_to_output_file[index_of_returned_original_bytes] = 
 							returned_original_bytes_to_output_file[index_of_returned_original_bytes- d];
@@ -883,13 +743,15 @@ public class LZ77 {
 				returned_original_bytes_to_output_file[index_of_returned_original_bytes] = compressed_file_as_bytes[j + 1];
 				index_of_returned_original_bytes++;
 			}
-			j++;
+			
 		}
+		//writing to file.
 		try {
 			FileOutputStream fileOutputStream = new FileOutputStream(
 					output_file_path);
 			fileOutputStream.write(returned_original_bytes_to_output_file, 0,
 					index_of_returned_original_bytes);
+			fileOutputStream.close();
 
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
@@ -902,34 +764,34 @@ public class LZ77 {
 	}
 	
 	
-	
 	public void Decompress_Upgraded(String input_file_path, String output_file_path) {
+		/*this method is similar to decompress just with reading of array that hold letters to replace with.*/
 
 		File input_file = new File(input_file_path);
 		
-		/*
-		 * Array of all the bytes of the file.
-		 */
+		byte[] size_of_fixing_info = new byte[4];//later will be an integer that tell us
+		                                        //the size of fixing info.
 		
+		byte[] size_1_2_3_or_4=new byte[1];//byte that tell us if indices are the size of 1,2,3 or4.
 		
-		byte[] size_of_fixing_info = new byte[4];
 		byte[] compressed_file_as_bytes=null;
 		byte[] fixing_info=null;
 		
 		try {
 			FileInputStream fileInputStream = new FileInputStream(input_file);
 			fileInputStream.read(size_of_fixing_info);
+			fileInputStream.read(size_1_2_3_or_4);
 			ByteBuffer wrapped = ByteBuffer.wrap(size_of_fixing_info);
 			int int_size_of_fixing_info = wrapped.getInt();
 			
 			fixing_info = new byte[int_size_of_fixing_info];
 			fileInputStream.read(fixing_info);
 			wrapped.clear();
-			compressed_file_as_bytes = new byte[(int) input_file.length()-int_size_of_fixing_info];
+			compressed_file_as_bytes = new byte[(int) input_file.length()-int_size_of_fixing_info-3];
 			fileInputStream.read(compressed_file_as_bytes); // reading all the
-															// file
-															// into
-															// compressed_file_as_bytes.
+															// file into compressed_file_as_bytes.
+			fileInputStream.close();
+			
 		} catch (FileNotFoundException e) {
 			System.out.println("File Not Found.");
 			e.printStackTrace();
@@ -939,58 +801,96 @@ public class LZ77 {
 		}
 		
 		
+		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file.length() * 100];//array
+		//that will hold all the decompressed bytes.
 		
-		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file.length() * 100];
+		int index_of_returned_original_bytes = 0;//initializing index.
 		
-		int index_of_returned_original_bytes = 0;
-		
-		for (int j = 0; j < compressed_file_as_bytes.length; j++) {
-			d = (int) compressed_file_as_bytes[j];
-			d = d << 24;
+		for (int j = 0; j < compressed_file_as_bytes.length; j=j+2) {
+			
+			d = (int) compressed_file_as_bytes[j]; //reading byte
+			
+			/*we shift the byte left 24 bits and right 24 bits,
+			 *to get rid of '1' that make the integer negative.*/
+			d = d << 24; 
 			d = d >>> 24;
-			d = d >>> 5;
-			l = (int) compressed_file_as_bytes[j];
-			l = l << 27; // 32-3
-			l = l >>> 27;//32-3
-	//		System.out.println("d is: "+d+" l is: "+l);
-
+			
+			d = d >>> bits_of_look_a_head_buffer;//shifting right number of bits of look a head buffer,
+		//so what is left is just the window.
+		
+			l = (int) compressed_file_as_bytes[j]; //reading byte
+			
+			/*we shift the byte left 24 bits + bits of window and right 24 bits+ bits of window,
+			 *to get rid of '1' that make the integer negative and to get rid of bits of window,
+			 *so what is left is just look a head buffer.*/
+			l = l << 24+bits_of_max_sliding_window; 
+			l = l >>> 24+bits_of_max_sliding_window;
+		
+			/*if we don't copy from window, just write the c byte that is next.*/
 			if (d == 0) {
 				returned_original_bytes_to_output_file[index_of_returned_original_bytes] = compressed_file_as_bytes[j + 1];
-				System.out.println("just decompressed ["+index_of_returned_original_bytes +"], the char\"" +(char) returned_original_bytes_to_output_file[index_of_returned_original_bytes]+"\"");
 				index_of_returned_original_bytes++;
-			} else {
+				
+			} else { /*copy the length specified from window, than write the c byte that is next. */
 				while (l > 0) {
 					returned_original_bytes_to_output_file[index_of_returned_original_bytes] = 
 							returned_original_bytes_to_output_file[index_of_returned_original_bytes- d];
-					System.out.println("just decompressed ["+index_of_returned_original_bytes +"], the char\"" +(char) returned_original_bytes_to_output_file[index_of_returned_original_bytes]+"\"");
 					index_of_returned_original_bytes++;
 					l--;
 				}
 				returned_original_bytes_to_output_file[index_of_returned_original_bytes] = compressed_file_as_bytes[j + 1];
-				System.out.println("just decompressed ["+index_of_returned_original_bytes +"], the char\"" +(char) returned_original_bytes_to_output_file[index_of_returned_original_bytes]+"\"");
 				index_of_returned_original_bytes++;
 			}
-			j++;
-		}
-		byte[] index_of_char_to_fix=new byte[2];
-		for (int i = 0; i <fixing_info.length-2; i=i+3) {
-			index_of_char_to_fix[0]=fixing_info[i];
-			index_of_char_to_fix[1]=fixing_info[i+1];
-		//	index_of_char_to_fix[2]=fixing_info[i+2];
-		//	index_of_char_to_fix[3]=fixing_info[i+3];
-			ByteBuffer wrapped = ByteBuffer.wrap(index_of_char_to_fix);
-			short int_index_of_char_to_fix = wrapped.getShort();
-			byte original_byte=fixing_info[i+2];
-			returned_original_bytes_to_output_file[int_index_of_char_to_fix]=original_byte;
 			
+		}
+		
+		/*initializing variables.*/
+		byte[] index_of_char_to_fix=new byte[4];
+		int int_index_of_char_to_fix;
+		byte original_byte;
+		
+		for (int i = 0; i <fixing_info.length-size_1_2_3_or_4[0]; i=i+size_1_2_3_or_4[0]+1) {//loop over array of
+			                                                                              //fixing info.
+			for (int j = 0; j < size_1_2_3_or_4[0]; j++) {//loop for retrieving the index depending on indices size,
+				//that was sent from compressor
+				
+				index_of_char_to_fix[4-size_1_2_3_or_4[0]+j]=fixing_info[i+j];
+			}
+			
+			ByteBuffer wrapped = ByteBuffer.wrap(index_of_char_to_fix);
+			
+			/*again, depending of size of indices, retrieving the letter from the right place in array.*/
+			if(size_1_2_3_or_4[0]==1){
+				 int_index_of_char_to_fix = wrapped.getInt();
+			     original_byte=fixing_info[i+1];
+			}
+			else if(size_1_2_3_or_4[0]==2){
+				 int_index_of_char_to_fix = wrapped.getInt();
+				 original_byte=fixing_info[i+2];
+			}
+			else if(size_1_2_3_or_4[0]==3){
+				 int_index_of_char_to_fix = wrapped.getInt();
+				 original_byte=fixing_info[i+3];
+			}
+			else{
+				 int_index_of_char_to_fix = wrapped.getInt();
+				 original_byte=fixing_info[i+4];
+			}
+			
+			returned_original_bytes_to_output_file[int_index_of_char_to_fix]=original_byte; //returning the right letter
+			                                                                              //to it's original position.
+			
+			/*printing for user.*/
 			System.out.println("just changed ["+int_index_of_char_to_fix +"],to the char\"" +(char) returned_original_bytes_to_output_file[int_index_of_char_to_fix]+"\"");
 			
 		}
+		//writing to file.
 		try {
 			FileOutputStream fileOutputStream = new FileOutputStream(
 					output_file_path);
 			fileOutputStream.write(returned_original_bytes_to_output_file, 0,
 					index_of_returned_original_bytes);
+			fileOutputStream.close();
 			
 			
 
@@ -1006,40 +906,19 @@ public class LZ77 {
 
 	private void putNumbersAtUpgrade(int[] temp_index_of_upgrade_, byte[] temp_save_old_char, byte[] temp_save_char_after_switch,
 				byte[] save_old_char, int[] save_index_of_upgrade, byte[] save_char_after_twist, byte charBeforeChange,
-					int j, int step_forward, boolean saveFirst) {
-		  
-		  if(number_of_changes >0) {
-			  if (temp_index_of_upgrade_[number_of_changes-1] != (j+step_forward)) {
-					temp_save_old_char[number_of_changes]=charBeforeChange;
-					temp_index_of_upgrade_[number_of_changes]=j+step_forward;	
-					temp_save_char_after_switch[number_of_changes]=content_file_as_bytes[j- tmp_d + step_forward];
-				//	content_file_as_bytes[j+step_forward] = content_file_as_bytes[j- tmp_d + step_forward];
-					number_of_changes++;
-					
-				System.out.println("This is the " + number_of_changes + "number of change.\nnew char: " + (char) content_file_as_bytes[j+step_forward]+
-							", at index: " + (j+step_forward) + ". old char: " +(char) charBeforeChange);
-				}
-		  }
-		  else {
-			  temp_save_old_char[number_of_changes]=charBeforeChange;
+					int j, int step_forward) {
+		/*
+		 * That's method called when we have new temporary upgrade and we need to save at the arrays the new values
+		 */
+				temp_save_old_char[number_of_changes]=charBeforeChange;
 				temp_index_of_upgrade_[number_of_changes]=j+step_forward;	
 				temp_save_char_after_switch[number_of_changes]=content_file_as_bytes[j- tmp_d + step_forward];
-			//	content_file_as_bytes[j+step_forward] = content_file_as_bytes[j- tmp_d + step_forward];
-				number_of_changes++;
-				
-			System.out.println("This is the " + number_of_changes + "number of change.\nnew char: " + (char)content_file_as_bytes[j+step_forward]+
-						", at index: " + (j+step_forward) + ". old char: " +(char) charBeforeChange);
-		 }
-		  
-		  
-			
-		 if (!saveFirst) {
-			 for (int i=0; i<number_of_changes; i++) {
-					save_old_char[i] = temp_save_old_char[i];
-					save_index_of_upgrade[i] = temp_index_of_upgrade_[i];	
-					save_char_after_twist[i] = temp_save_char_after_switch[i];
-			 }
-		 }
+				/*
+			 			we change at index [number_of_changes] we put at 
+			 			temp_save_char_after_switch: content_file_as_bytes[j- tmp_d + step_forward],
+						at temp_index_of_upgrade_: (j+step_forward), and at temp-old-char:  charBeforeChange 
+				 */
+				number_of_changes++; // for the next change
 	}
 	
 }
