@@ -1,4 +1,4 @@
-//package gui;
+
 
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -29,12 +29,12 @@ public class Gui_lz77 {
 	private int action; // 1-compress 2-decompress 3-compressUpgrade
 						// 4-DecompressUpgrade
 	private LZ77 lz;
-	protected String upgrade_side_file_path; // needs to delete this!
+	
 	private JTextField textFieldWindow;
+	private JTextField textFieldSize;
 
-	/**
-	 * Launch the application.
-	 */
+	/*launch the application*/
+	
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
@@ -48,7 +48,7 @@ public class Gui_lz77 {
 		});
 	}
 
-	/**
+	/*
 	 * Create the application.
 	 */
 	public Gui_lz77() {
@@ -56,7 +56,7 @@ public class Gui_lz77 {
 		initialize();
 	}
 
-	/**
+	/*
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
@@ -70,6 +70,9 @@ public class Gui_lz77 {
 		menu_panel.setBackground(new Color(255, 255, 204));
 		frame.getContentPane().add(menu_panel, "name_132382732624764");
 		menu_panel.setLayout(null);
+		
+		JLabel lbWelcome = new JLabel("");
+		lbWelcome.setBounds(130, 11, 141, 14);
 
 		JButton generateButton = new JButton("Generate txt file");
 		generateButton.addActionListener(new ActionListener() {
@@ -81,48 +84,54 @@ public class Gui_lz77 {
 		generateButton.setBounds(10, 11, 161, 30);
 		menu_panel.add(generateButton);
 
-		JButton compressButton = new JButton("Compress");
-		compressButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				action = 1;
-				other_actions_panel.setVisible(true);
-				menu_panel.setVisible(false);
-			}
-		});
-		compressButton.setBounds(10, 52, 161, 30);
-		menu_panel.add(compressButton);
+		
 
-		JButton decompressButton = new JButton("Decompress");
+		JButton decompressButton = new JButton("Classic Decompress");
 		decompressButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				action = 2;
+				lbWelcome.setText("Classic Decompress");
 				other_actions_panel.setVisible(true);
 				menu_panel.setVisible(false);
 			}
 		});
-		decompressButton.setBounds(10, 93, 161, 30);
+		decompressButton.setBounds(10, 114, 161, 30);
 		menu_panel.add(decompressButton);
+		
+		JButton compressButton = new JButton("Classic Compress");
+		compressButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				action = 1;
+				lbWelcome.setText("Classic Compress");
+				other_actions_panel.setVisible(true);
+				menu_panel.setVisible(false);
+			}
+		});
+		compressButton.setBounds(10, 73, 161, 30);
+		menu_panel.add(compressButton);
 
 		JButton compressUpgradeButton = new JButton("Compress upgraded");
 		compressUpgradeButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				action = 3;
+				lbWelcome.setText("Compress upgraded");
 				other_actions_panel.setVisible(true);
 				menu_panel.setVisible(false);
 			}
 		});
-		compressUpgradeButton.setBounds(10, 133, 161, 30);
+		compressUpgradeButton.setBounds(10, 180, 161, 30);
 		menu_panel.add(compressUpgradeButton);
 
 		JButton decompressUpgradeButton = new JButton("Decompress upgraded");
 		decompressUpgradeButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				lbWelcome.setText("Decompress upgraded");
 				action = 4;
 				other_actions_panel.setVisible(true);
 				menu_panel.setVisible(false);
 			}
 		});
-		decompressUpgradeButton.setBounds(10, 180, 161, 30);
+		decompressUpgradeButton.setBounds(10, 221, 161, 30);
 		menu_panel.add(decompressUpgradeButton);
 
 		generate_panel = new JPanel();
@@ -160,21 +169,40 @@ public class Gui_lz77 {
 		JLabel lbGeneratingDone = new JLabel("");
 		lbGeneratingDone.setBounds(175, 170, 82, 14);
 		generate_panel.add(lbGeneratingDone);
+		
+		JLabel lblSizeInBytes = new JLabel("size in bytes:");
+		lblSizeInBytes.setBounds(10, 59, 85, 14);
+		generate_panel.add(lblSizeInBytes);
+		
+		textFieldSize = new JTextField();
+		textFieldSize.setText("2");
+		textFieldSize.setBounds(129, 56, 128, 20);
+		generate_panel.add(textFieldSize);
+		textFieldSize.setColumns(10);
 
 		JButton generate2Button = new JButton("Generate text");
 		generate2Button.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
+				int size;
 				try {
+					size = Integer.parseInt(textFieldSize.getText());
+					if(size<0||size>5000000){
+						throw new Exception();
+					}
 					if (output_file_path == null) {
 
 						throw new FileNotFoundException();
 					}
 					lbGeneratingDone.setText("generating..");
-					lz.Generate_String(output_file_path);
+					lz.Generate_String(output_file_path,size);
 					lbGeneratingDone.setText("done!");
+				
 				} catch (FileNotFoundException e3) {
 					JOptionPane.showMessageDialog(null,
 							"please choose directory.");
+				} catch (Exception e4) {
+					JOptionPane.showMessageDialog(null,
+							"please enter a valid number between 2-5,000,000.");
 				}
 			}
 		});
@@ -186,22 +214,27 @@ public class Gui_lz77 {
 			public void actionPerformed(ActionEvent e) {
 				generate_panel.setVisible(false);
 				menu_panel.setVisible(true);
+				lbGeneratingDone.setText("");
 			}
 		});
 		btnBack.setBounds(10, 202, 68, 23);
 		generate_panel.add(btnBack);
+		
 
 		other_actions_panel = new JPanel();
 		other_actions_panel.setBackground(new Color(255, 255, 204));
 		frame.getContentPane().add(other_actions_panel, "name_132440449940290");
 		other_actions_panel.setLayout(null);
+		
+		
+		other_actions_panel.add(lbWelcome);
 
 		JLabel lbOpenFile = new JLabel("");
-		lbOpenFile.setBounds(210, 10, 200, 23);
+		lbOpenFile.setBounds(210, 53, 200, 23);
 		other_actions_panel.add(lbOpenFile);
 
 		JLabel lbSaveAt = new JLabel("");
-		lbSaveAt.setBounds(210, 44, 200, 23);
+		lbSaveAt.setBounds(210, 87, 200, 23);
 		other_actions_panel.add(lbSaveAt);
 
 		JButton btnOpenFile = new JButton("Open file");
@@ -225,7 +258,7 @@ public class Gui_lz77 {
 				}
 			}
 		});
-		btnOpenFile.setBounds(10, 10, 149, 23);
+		btnOpenFile.setBounds(10, 53, 149, 23);
 		other_actions_panel.add(btnOpenFile);
 
 		JButton btnSaveAt = new JButton("Save at");
@@ -252,7 +285,7 @@ public class Gui_lz77 {
 				}
 			}
 		});
-		btnSaveAt.setBounds(10, 44, 149, 23);
+		btnSaveAt.setBounds(10, 87, 149, 23);
 		other_actions_panel.add(btnSaveAt);
 
 		JLabel lbcomputing_done = new JLabel("");
@@ -260,21 +293,21 @@ public class Gui_lz77 {
 		other_actions_panel.add(lbcomputing_done);
 
 		JLabel lbBitsWindow = new JLabel("Size in bits of sliding window:");
-		lbBitsWindow.setBounds(10, 89, 143, 14);
+		lbBitsWindow.setBounds(16, 121, 143, 14);
 		other_actions_panel.add(lbBitsWindow);
 
 		JLabel lbBitsLook = new JLabel(
 				"Size in bits of the look a head buffer:");
-		lbBitsLook.setBounds(10, 114, 185, 14);
+		lbBitsLook.setBounds(10, 146, 185, 14);
 		other_actions_panel.add(lbBitsLook);
 
 		JLabel lbLook = new JLabel("5");
-		lbLook.setBounds(260, 114, 88, 14);
+		lbLook.setBounds(260, 146, 88, 14);
 		other_actions_panel.add(lbLook);
 
 		textFieldWindow = new JTextField();
 		textFieldWindow.setText("3");
-		textFieldWindow.setBounds(262, 86, 86, 20);
+		textFieldWindow.setBounds(260, 118, 86, 20);
 		other_actions_panel.add(textFieldWindow);
 		textFieldWindow.setColumns(10);
 
@@ -325,7 +358,7 @@ public class Gui_lz77 {
 				}
 			}
 		});
-		btnGo.setBounds(133, 149, 200, 50);
+		btnGo.setBounds(130, 171, 200, 50);
 		other_actions_panel.add(btnGo);
 
 		JButton btnBack_1 = new JButton("back");
@@ -334,6 +367,7 @@ public class Gui_lz77 {
 				other_actions_panel.setVisible(false);
 				lbOpenFile.setText("");
 				lbSaveAt.setText("");
+				lbcomputing_done.setText("");
 				input_file_path = null;
 				output_file_path = null;
 				menu_panel.setVisible(true);
@@ -341,6 +375,8 @@ public class Gui_lz77 {
 		});
 		btnBack_1.setBounds(10, 217, 71, 23);
 		other_actions_panel.add(btnBack_1);
+		
+		
 
 	}
 }

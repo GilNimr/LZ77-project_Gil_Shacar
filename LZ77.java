@@ -5,9 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-;
-
-
 
 public class LZ77 {
 
@@ -35,7 +32,6 @@ public class LZ77 {
 	
 	private byte[] compressed_content_bytes_to_output_file;// array of all the 
 	//compressed bytes sent to output file.
-
 	
 	/* upgrade compress definitions of global variables */
 
@@ -70,7 +66,7 @@ public class LZ77 {
 	/*this method generates a text file that is optimal for our upgraded LZ77.
 	 * it makes sure there is no consecutive "errors", and also is pretty small.
 	 * so the indices are no more than 1 byte. */
-	public void Generate_String(String output_file_path) {
+	public void Generate_String(String output_file_path,int size) {
 		
 		StringBuilder str = new StringBuilder();
 		
@@ -80,7 +76,7 @@ public class LZ77 {
 		
 		boolean error = false;
 
-		for (int i = 0; i < 120; i++) {
+		for (int i = 0; i < size-2; i++) {
 			probabilty = Math.random();
 			if ((probabilty > 0.3) || (error == false)) {
 				str.append('a');
@@ -122,7 +118,7 @@ public class LZ77 {
 	/*our implementation of classic LZ77.*/
 	public void Compress(String input_file_path, String output_file_path) {
 
-		File input_file = new File(input_file_path);
+		File input_file = new File(input_file_path); // the input as file
 
 		content_file_as_bytes = new byte[(int) input_file.length()];
 
@@ -141,7 +137,7 @@ public class LZ77 {
 			e1.printStackTrace();
 		}
 
-		compressed_content_bytes_to_output_file = new byte[(int) input_file.length() * 2];
+		compressed_content_bytes_to_output_file = new byte[(int) input_file.length() * 6];
 
 		/*loop that goes all through bytes of input file.*/
 		for (int j = 0; j < content_file_as_bytes.length; j++) {
@@ -175,7 +171,7 @@ public class LZ77 {
 				if (tmp_l > l) {
 					l = tmp_l;
 					d = tmp_d;
-					if (j + step_forward + 1 < content_file_as_bytes.length)
+					if (j + step_forward + 1 <= content_file_as_bytes.length)
 						c = (char) content_file_as_bytes[j + step_forward];
 					else
 						c = ' ';
@@ -228,7 +224,7 @@ public class LZ77 {
 		
 		File input_file = new File(input_file_path);	// the input
 		content_file_as_bytes = new byte[(int) input_file.length()];	 
-		compressed_content_bytes_to_output_file = new byte[(int) input_file.length() * 2];
+		compressed_content_bytes_to_output_file = new byte[(int) input_file.length() * 6];
 		indexes_of_changes = new int[(int) input_file.length()];
 		letters_to_save = new byte[(int) input_file.length()];
 		int indexesAtFinito=0; // counter for indexes_of_changes and letters_to_save_bytes.
@@ -300,7 +296,7 @@ public class LZ77 {
 					if (sliding_window > max_sliding_window)//sliding window starts at 0 and grows until it reaches max.
 						sliding_window = max_sliding_window;
 
-					/* after all initializations, we are reading index [j], it's c, and we
+					/* after all initializations, we are reading index [j], it's variable c, and we
 					start the loop of sliding window:*/
 
 					for (int k = 0; k < sliding_window; k++) {
@@ -343,13 +339,10 @@ public class LZ77 {
 							
 							byte charBeforeChange = content_file_as_bytes[j + step_forward];  // we save the char we read.
 							
-							// we send it to check copy:
+							// we send it to check copy and save the values:
 							checkIfUpgrade(tmp_l, step_forward, j, temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch,  save_old_char, save_index_of_upgrade, save_char_after_twist);
+							putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward);
 							
-							// if upgrade is now true, we save it at our arrays:
-							if (upgrade) {
-								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward);							
-							}
 						}
 					}	
 				}
@@ -364,7 +357,7 @@ public class LZ77 {
 					
 					// while the byte we read is equal to the byte we copy
 					
-					boolean loopWithUpgrade = upgrade; // save if was some change
+					
 					tmp_l++;						   // adding one to tmp_l that may change l 
 					step_forward++;						// adding one to step_forward to check our next copy
 					
@@ -392,18 +385,11 @@ public class LZ77 {
 								 // if we are here its mean that the next step of bytes are equals, so we need to check upgrade
 								
 								byte charBeforeChange = content_file_as_bytes[j + step_forward];  // save the char we read
-								boolean saveIfUpgrade = loopWithUpgrade; // save if we are in loop with some upgrades already
 								
-								//send to check if it will br good to use upgrafe:
+								//send to check if it will be good to use upgrade:
 								checkIfUpgrade(tmp_l, step_forward, j, temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch,  save_old_char, save_index_of_upgrade, save_char_after_twist);
-							
-								  if (upgrade) { // if upgrade is true, we send it to save the values at the arrays:
-									  
-									 putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward);
-								}
-								  else if (saveIfUpgrade) { // if upgrade is false, but we are in loop that used once upgrade
-									  upgrade = true;
-								  }
+								// save values
+								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char, save_index_of_upgrade, save_char_after_twist, charBeforeChange, j, step_forward);							
 							}
 						}	
 					}
@@ -531,7 +517,7 @@ public class LZ77 {
 					index_of_compressed_content_bytes_to_output_file);
 			index_of_compressed_content_bytes_to_output_file = index_of_compressed_content_bytes_to_output_file + 2;
 			
-			// and we will continue to the next iteration with refresh vaues:
+			// and we will continue to the next iteration with refresh values:
 			j = j + l;
 			l = 0;
 			d = 0;
@@ -610,26 +596,22 @@ public class LZ77 {
 
 		/*
 		 * this function is called when there is an option to upgrade,
-		 * "upgrade" will get value true, if it is optimal to use the upgrade and change the content
-		 * else, "upgrade" will get value false. 
+		 * we will change the content text and check if it is optimal at the end of current iteration. if it is, we will keep the change
+		 * of text, else - we will change back the text
 		 */
 		
 		// saving the variables we are going to change.
-		byte old_char_of_iterate=content_file_as_bytes[j_ + step_forward_];
 		byte char_after_switch_of_iterate = content_file_as_bytes[j_- tmp_d + step_forward_];
-		int temp_index_of_iterate = j_+step_forward_;
-		int added_to_l = 0; // check how much we will add to l if we weill make the change
 		content_file_as_bytes[j_ + step_forward_] = char_after_switch_of_iterate; // change the content
 		
-			/* so we sent the char old_char_of_iterate to check if we will switch it to
-			 *  char_after_switch_of_iterate, at index [temp_index_of_iterate] of the source input it will be better then do it as 
+			/* so we sent the byte content_file_as_bytes[j_+step_forward_] to check if we will switch it to
+			 *  char_after_switch_of_iterate, at thats specific index of the source input it will be better then do it as 
 			 *  usual_lzz
 			 * So for temp, at index[temp_index_of_iterate] we get char_after_switch_of_iterate  
 			 */
 
 		do {
 			// becuase we know that the change of content-file makes one true copy, we use do-while loop for checking the next bytes
-			added_to_l++;
 			step_forward_++;
 			
 				if ((j_ + step_forward_+1 >= content_file_as_bytes.length)|| (step_forward_ >= look_a_head_buffer)) {
@@ -649,42 +631,27 @@ public class LZ77 {
 							int temp_step = step_forward_;
 							int temp_j = j_;
 							byte charBeforeChange = content_file_as_bytes[j_+step_forward_]; // if we will not change
-							boolean saveIfUpgraded = upgrade;
 							
 							// recursion:
 							checkIfUpgrade(tmp_l, temp_step, temp_j, temp_index_of_upgrade_, 
 									temp_save_old_char, temp_save_char_after_switch , save_old_char, save_index_of_upgrade, save_char_after_twist);
-							
-							if (upgrade) {
+							// save values:
 								putNumbersAtUpgrade(temp_index_of_upgrade_, temp_save_old_char, temp_save_char_after_switch, save_old_char,
 										save_index_of_upgrade, save_char_after_twist, charBeforeChange, j_, step_forward_);
-							}
-							
-							else if (saveIfUpgraded) {
-								upgrade=true;
-							}
 						}
 					}						
 				}
 				
 		} while ((content_file_as_bytes[j_ + step_forward_] == content_file_as_bytes[j_- tmp_d + step_forward_]));
-		
-		if (added_to_l > 2){  
+		 
 			/*
-			 * if added_to_l was 1, we didn't do anything, if it was 2, so with the upgrade array we will compress - for sure
-			 * it will be not optimal (1 we changed, and 1 is equal either way, but if it more then 2, it can be optimal
+			 * finished upgrade
 			 */
 		
 			upgrade = true;
 			was_first_change=true;
 			
 			// upgrade is true - we change the letters: at index[temp_index_of_iterate] we get char_after_switch_of_iterate
-		}
-		
-		else { 
-			upgrade = false;
-			content_file_as_bytes[temp_index_of_iterate] = old_char_of_iterate; // we return the content file
-		}
 	}
 	
 	private void AddTo_compressed_content_bytes_to_output_file(byte[] compressed_content_bytes_to_output_file, int d, int l,
@@ -716,7 +683,7 @@ public class LZ77 {
 
 	
 	public void Decompress(String input_file_path, String output_file_path) {
-		File input_file = new File(input_file_path);
+		File input_file = new File(input_file_path); // the input_file as file
 		
 		
 		//array of all the compressed bytes from input.
@@ -736,7 +703,7 @@ public class LZ77 {
 			e1.printStackTrace();
 		}
 		
-		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file.length() * 100];//array
+		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file.length() * 35];//array
 		//that will hold all the decompressed bytes.
 		
 		int index_of_returned_original_bytes = 0; //initializing index.
@@ -834,7 +801,7 @@ public class LZ77 {
 		}
 		
 		
-		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file.length() * 100];//array
+		byte[] returned_original_bytes_to_output_file = new byte[(int) input_file.length() * 35];//array
 		//that will hold all the decompressed bytes.
 		
 		int index_of_returned_original_bytes = 0;//initializing index.
