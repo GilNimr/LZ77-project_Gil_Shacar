@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.FileNotFoundException;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -51,7 +52,7 @@ public class Gui_lz77 {
 	 * Create the application.
 	 */
 	public Gui_lz77() {
-		lz = new LZ77(3,5);
+		lz = new LZ77(3, 5);
 		initialize();
 	}
 
@@ -155,7 +156,7 @@ public class Gui_lz77 {
 		});
 		chooseButton.setBounds(10, 10, 144, 23);
 		generate_panel.add(chooseButton);
-		
+
 		JLabel lbGeneratingDone = new JLabel("");
 		lbGeneratingDone.setBounds(175, 170, 82, 14);
 		generate_panel.add(lbGeneratingDone);
@@ -163,9 +164,18 @@ public class Gui_lz77 {
 		JButton generate2Button = new JButton("Generate text");
 		generate2Button.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				lbGeneratingDone.setText("generating..");
-				lz.Generate_String(output_file_path);
-				lbGeneratingDone.setText("done!");
+				try {
+					if (output_file_path == null) {
+
+						throw new FileNotFoundException();
+					}
+					lbGeneratingDone.setText("generating..");
+					lz.Generate_String(output_file_path);
+					lbGeneratingDone.setText("done!");
+				} catch (FileNotFoundException e3) {
+					JOptionPane.showMessageDialog(null,
+							"please choose directory.");
+				}
 			}
 		});
 		generate2Button.setBounds(124, 107, 184, 36);
@@ -180,8 +190,6 @@ public class Gui_lz77 {
 		});
 		btnBack.setBounds(10, 202, 68, 23);
 		generate_panel.add(btnBack);
-
-		
 
 		other_actions_panel = new JPanel();
 		other_actions_panel.setBackground(new Color(255, 255, 204));
@@ -250,19 +258,20 @@ public class Gui_lz77 {
 		JLabel lbcomputing_done = new JLabel("");
 		lbcomputing_done.setBounds(200, 221, 71, 14);
 		other_actions_panel.add(lbcomputing_done);
-		
+
 		JLabel lbBitsWindow = new JLabel("Size in bits of sliding window:");
 		lbBitsWindow.setBounds(10, 89, 143, 14);
 		other_actions_panel.add(lbBitsWindow);
-		
-		JLabel lbBitsLook = new JLabel("Size in bits of the look a head buffer:");
+
+		JLabel lbBitsLook = new JLabel(
+				"Size in bits of the look a head buffer:");
 		lbBitsLook.setBounds(10, 114, 185, 14);
 		other_actions_panel.add(lbBitsLook);
-		
+
 		JLabel lbLook = new JLabel("5");
 		lbLook.setBounds(260, 114, 88, 14);
 		other_actions_panel.add(lbLook);
-		
+
 		textFieldWindow = new JTextField();
 		textFieldWindow.setText("3");
 		textFieldWindow.setBounds(262, 86, 86, 20);
@@ -273,26 +282,34 @@ public class Gui_lz77 {
 		btnGo.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				int sliding_window, look_a_head;
-				try{
-					sliding_window=Integer.parseInt(textFieldWindow.getText());
-					if(sliding_window>7||sliding_window<1){
-	
+				try {
+					sliding_window = Integer.parseInt(textFieldWindow.getText());
+					if (sliding_window > 7 || sliding_window < 1) {
+
 						throw new Exception();
-						
+
 					}
-		            look_a_head=8-sliding_window;
-		            lbLook.setText(Integer.toString(look_a_head));
-		           lz=new LZ77(sliding_window,look_a_head);
+					if (input_file_path == null || output_file_path == null) {
+
+						throw new FileNotFoundException();
 					}
-				catch(Exception e1){
-					JOptionPane.showMessageDialog(null, "please enter a valid number between 1-7");
-					action=5;
+					look_a_head = 8 - sliding_window;
+					lbLook.setText(Integer.toString(look_a_head));
+					lz = new LZ77(sliding_window, look_a_head);
+				} catch (FileNotFoundException e2) {
+					JOptionPane.showMessageDialog(null,
+							"please choose file and directory.");
+					action = 5;
+				} catch (Exception e1) {
+					JOptionPane.showMessageDialog(null,
+							"please enter a valid number between 1-7");
+					action = 5;
 				}
 				if (action == 1) {
 					lbcomputing_done.setText("compressing..");
 					lz.Compress(input_file_path, output_file_path);
 					lbcomputing_done.setText("done!");
-					
+
 				} else if (action == 2) {
 					lbcomputing_done.setText("decompressing..");
 					lz.Decompress(input_file_path, output_file_path);
@@ -317,15 +334,13 @@ public class Gui_lz77 {
 				other_actions_panel.setVisible(false);
 				lbOpenFile.setText("");
 				lbSaveAt.setText("");
-				input_file_path=null;
-				output_file_path=null;
+				input_file_path = null;
+				output_file_path = null;
 				menu_panel.setVisible(true);
 			}
 		});
 		btnBack_1.setBounds(10, 217, 71, 23);
 		other_actions_panel.add(btnBack_1);
-		
-		
 
 	}
 }
