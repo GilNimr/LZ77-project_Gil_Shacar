@@ -1,3 +1,7 @@
+/* Submitted by: 
+ * Shachar Bartal 305262016
+ * Gil Nevo 310021654 */
+
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -7,13 +11,19 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class LZ77 {
+	
+	/*
+	 * lz77 compresses using tuples.
+	 * the tuple will be as follows: (d,l,c), d is how far back to go, l
+	 * is how many characters to copy, c is the next character after that.
+	 */
 
 	private int sliding_window; // the sliding_window
 	private int tmp_d; // variable for finding d.
 	private int d; // how much going back.
 	private int tmp_l; // variable for finding l.	
 	private int l; // length of bytes to copy.
-	private char c; // the char we will put at each iterate of compression
+	private char c; // the char we will put at each iteration of compression
 
 	private int index_of_compressed_content_bytes_to_output_file = 0;	// index for appointing
 	//bytes to compressed_content_bytes_to_output_file variable
@@ -33,28 +43,28 @@ public class LZ77 {
 	private byte[] compressed_content_bytes_to_output_file;// array of all the 
 	//compressed bytes sent to output file.
 	
-	/* upgrade compress definitions of global variables */
+	/* upgraded compress definitions of global variables */
 
-	private boolean upgrade;// true if we going to save the upgrade - just at
+	private boolean upgrade;// gets true if we are going to save the upgrade - just at
 	// compress at specific iterate of k.
 
-	private boolean was_first_change;// will be off each new letter we will read
+	private boolean was_first_change;// will be of each new letter we will read
 	// (at loop), will be true after first use at upgrade because of saving the changes if we will not use
 	// specific upgrade after that time
 
 	private int number_of_changes;// how much changes at each new letter we will
 									// read (at loop). counter
 
-	/*constructor*/
-	LZ77(int bits_of_max_sliding_window, int bits_of_look_a_head_buffer) {
+	/*constructor - gets bits to use for window as a parameter, needs to be  between 1-7*/
+	LZ77(int bits_of_max_sliding_window) {
 		
 		this.max_sliding_window = (int) Math.pow(2,(double) bits_of_max_sliding_window) - 1; //max_sliding_window,
 		//is 2 in the power of the input bits of window from the user.
 		
-		this.look_a_head_buffer = (int) Math.pow(2,(double) bits_of_look_a_head_buffer) - 1;//look_a_head_buffer,
-		//is 2 in the power of the input bits of look_a_head_buffer from the user.
+		this.look_a_head_buffer = (int) Math.pow(2,(double) 8-bits_of_max_sliding_window) - 1;//look_a_head_buffer,
+		//is 2 in the power of the bits of 8-bits of window from the user.
 		
-		this.bits_of_look_a_head_buffer = bits_of_look_a_head_buffer;
+		this.bits_of_look_a_head_buffer = 8-bits_of_max_sliding_window;
 		
 		this.bits_of_max_sliding_window = bits_of_max_sliding_window;
 
@@ -347,9 +357,9 @@ public class LZ77 {
 					}	
 				}
 				
-				/*  important ! if boolean upgrade is true, it just say means that we may use it, we still didn't compress
-				*	nothing.
-				*	if upgrade was true, so until the end of iteration, there is a change at content-file, so the next while-loop use it.
+				/*  important ! if boolean upgrade is true, it just means that we may use it, we still didn't compress
+				*	anything.
+				*	if upgrade was true, until the end of the iteration, there is a change at content-file, so the next while-loop uses it.
 				*/		
 				
 				while ((content_file_as_bytes[j + step_forward] == content_file_as_bytes[j
@@ -359,9 +369,9 @@ public class LZ77 {
 					
 					
 					tmp_l++;						   // adding one to tmp_l that may change l 
-					step_forward++;						// adding one to step_forward to check our next copy
+					step_forward++;						// adding one to step_forward to check our next char we want to copy
 					
-					// if we finished the look_a_head_buffer or finished reading the bytes
+					// if we passed the look_a_head_buffer or finished reading the bytes
 					if ((j + step_forward >= content_file_as_bytes.length)  
 							|| (step_forward >= look_a_head_buffer))
 						break;
@@ -374,10 +384,10 @@ public class LZ77 {
 					if (!(content_file_as_bytes[j + step_forward] == content_file_as_bytes[j- tmp_d + step_forward])) { // if its not equal		
 						 if (j + step_forward+1 < content_file_as_bytes.length) { // if we are not in the last byte of file
 							 
-							 /* if we are here, it's mean that The next byte we read is content_file_as_bytes[j+step_forward],
+							 /* if we are here, it means that The next byte we read is content_file_as_bytes[j+step_forward],
 							  *  and it's unequal to content_file_as_bytes[j- tmp_d + step_forward],
-							  *  so now we need to check about upgrade, 
-							  *  the next step of letter is: copy: content_file_as_bytes[j - tmp_d + step_forward+1], 
+							  *  so now we need to check about the upgrade, 
+							  *  the next step letter is:   copy: content_file_as_bytes[j - tmp_d + step_forward+1], 
 							  *  							read: content_file_as_bytes[j + step_forward+1]    
 							  */
 						
@@ -398,13 +408,13 @@ public class LZ77 {
 				
 				if ( (tmp_l > l) || ( (tmp_l==l) && (!upgrade) && (tmp_l>0) ) || ((tmp_l==l) && (upgrade) && (tmp_l>0) && (final_number_of_changes>number_of_changes) ) ){
 
-					/* if we found optimal compressed at that iteration: tmp_l bigger then l.
-						--	or tmp_l equal to l but not use the upgrade - we prefer use the usual lz_77 if it the same 
-								l because the upgrade are use more bytes at compressed file
-					 	--	or we prefer use compression with much less changes because each change is more size of compressed file
+					/* if we found optimal compression at that iteration: tmp_l bigger then l.
+						--	or tmp_l equal to l but not using the upgrade - we prefer to use the usual lz_77 if it is the same 
+								l, because the upgrade is writing more bytes to compressed file
+					 	--	or we using the upgrade but with less changes - we prefer to use compression with much less changes because each change adds more size to compressed file
 					 	*/
-					if (j+step_forward<content_file_as_bytes.length) { // if we still not finished to read
-						// we save the values of the next char, that going to be at c variable
+					if (j+step_forward<content_file_as_bytes.length) { // if we still did not finish to read
+						// we save the values of the next char, that is going to be the c variable
 						tempOfFinalIndex = j+step_forward;
 						tempOfFinalOldChar = content_file_as_bytes[j+step_forward];
 						tempOfFinalCharAfterTwist =  content_file_as_bytes[j - tmp_d + step_forward];
@@ -412,42 +422,42 @@ public class LZ77 {
 					
 					if (j + step_forward + 1 <= content_file_as_bytes.length)    {
 						if ( content_file_as_bytes[j - tmp_d + step_forward]  != content_file_as_bytes[j + step_forward]) {
-							// we are here if we need to use upgrade on c - to change the next byte to the next byte we would copy 
+							// we are here if we need to use the upgrade on c - to change the next byte to the next byte we would like to copy 
 							
-							changeTheExtra=true; // we say to computer that we used upgrade to c , so we will save all 
-													//the values at the array of upgrade at the end of compress
-							c = (char) content_file_as_bytes[j - tmp_d + step_forward] ; // we save c as the next byte we would copy	
+							changeTheExtra=true; // boolean to indicate we used the upgrade on c , so we will save all 
+													//the values at the array of the upgrade at the end of compress
+							c = (char) content_file_as_bytes[j - tmp_d + step_forward] ; // we save c as the next byte we would like to copy	
 						}
 						
-						else { // else c will take char as usual lz_77
+						else { // else c will get the next char like usual lz_77
 							c = (char) content_file_as_bytes[j + step_forward];	
 						}				
 					}	
 					
-					else	// if we finished read the file
+					else	// if we finished reading the file
 						c = ' ';
 					
 					if (upgrade) {
-						// if we found optimal compress and upgrade was in use:
+						// if we found optimal compression and upgrade was in use:
 						
 						final_number_of_changes = number_of_changes; // we save the number of changes
-						use_the_upgrade=true; 						// we turn on use_the_upgrade so the computer know to use it at the end of loop
+						use_the_upgrade=true; 						// we turn on use_the_upgrade so the program will know to use it at the end of the loop
 
 						for (int i=0; i<number_of_changes; i++) {
-							// we save the values that was at temp-arrays to save-arrays:
+							// we save the values that were at temp-arrays to save-arrays:
 							save_old_char[i] = temp_save_old_char[i];
 							save_index_of_upgrade[i] = temp_index_of_upgrade_[i];	
 							save_char_after_twist[i] = temp_save_char_after_switch[i];
 							
-							// because we stilln't finished checking optimal compress, we back the content-file to how it was before last changes
+							// because we still did not finis hchecking optimal compression, we are back to content-file the way it was before last changes
 							content_file_as_bytes[temp_index_of_upgrade_[i]] = save_old_char[i];  
 						}
 					}
 					
-					else { // if we found optimal compress and upgrade was not in use:
-						use_the_upgrade = false; // we turn off use_the_upgrade so the computer not use it at the end
+					else { // if we found optimal compression and upgrade was not in use:
+						use_the_upgrade = false; // we turn off use_the_upgrade so the program will not use it at the end
 
-						if (was_first_change) { // if we changed already someting at conten-file, we return it:
+						if (was_first_change) { // if we changed already someting at content-file, we will return it now:
 							for (int i=0; i<number_of_changes; i++) {							
 								content_file_as_bytes[temp_index_of_upgrade_[i]] = temp_save_old_char[i];
 							}
@@ -461,7 +471,7 @@ public class LZ77 {
 				
 				
 				
-				else if (was_first_change) { // if we finished iteration, we changed something but at the end we are not use it, we return it:
+				else if (was_first_change) { // if we finished iteration, we changed something but at the end we did not use it, we will return it now:
 					for (int i=0; i<number_of_changes; i++) {							
 						content_file_as_bytes[temp_index_of_upgrade_[i]] = temp_save_old_char[i];
 					}
@@ -474,7 +484,7 @@ public class LZ77 {
 			
 			if (use_the_upgrade) { 
 				/* 
-				 * if the optimal compressed we found was with upgrade, we will change the 
+				 * if the optimal compression we found was with upgrade, we will change the 
 				 *  content_file as upgrade and save values at the final array of upgrade 
 				*/ 
 					
@@ -508,7 +518,7 @@ public class LZ77 {
 				 * at specific index
 				 */
 				indexesAtFinito++;
-				changeTheExtra=false; // we turn back the changeTheExtra
+				changeTheExtra=false; // we turn off the changeTheExtra
 			}
 
 			// we send the values to compress
@@ -517,7 +527,7 @@ public class LZ77 {
 					index_of_compressed_content_bytes_to_output_file);
 			index_of_compressed_content_bytes_to_output_file = index_of_compressed_content_bytes_to_output_file + 2;
 			
-			// and we will continue to the next iteration with refresh values:
+			// and we will continue to the next iteration with refreshed values:
 			j = j + l;
 			l = 0;
 			d = 0;
@@ -525,7 +535,7 @@ public class LZ77 {
 		} // end of j loop - the chars we read
 		
 		try {
-			// after we finished reading the file, write the compress file
+			// after we finished reading the file, write the compressed file
 			FileOutputStream fileOutputStream = new FileOutputStream(output_file_path);
 			DataOutputStream out = new DataOutputStream(fileOutputStream);
 			
@@ -596,8 +606,8 @@ public class LZ77 {
 
 		/*
 		 * this function is called when there is an option to upgrade,
-		 * we will change the content text and check if it is optimal at the end of current iteration. if it is, we will keep the change
-		 * of text, else - we will change back the text
+		 * we will change the content text and check if it is optimal at the end of current iteration. if it is, we will keep the changes
+		 * of the text, else - we will change back the original text
 		 */
 		
 		// saving the variables we are going to change.
@@ -605,13 +615,13 @@ public class LZ77 {
 		content_file_as_bytes[j_ + step_forward_] = char_after_switch_of_iterate; // change the content
 		
 			/* so we sent the byte content_file_as_bytes[j_+step_forward_] to check if we will switch it to
-			 *  char_after_switch_of_iterate, at thats specific index of the source input it will be better then do it as 
+			 *  char_after_switch_of_iterate, at that specific index of the source input it will be better then to do it as 
 			 *  usual_lzz
 			 * So for temp, at index[temp_index_of_iterate] we get char_after_switch_of_iterate  
 			 */
 
 		do {
-			// becuase we know that the change of content-file makes one true copy, we use do-while loop for checking the next bytes
+			// becuase we know that the change of content-file makes one successful copy for sure, we use do-while loop for checking the next bytes
 			step_forward_++;
 			
 				if ((j_ + step_forward_+1 >= content_file_as_bytes.length)|| (step_forward_ >= look_a_head_buffer)) {
@@ -908,7 +918,7 @@ public class LZ77 {
 				byte[] save_old_char, int[] save_index_of_upgrade, byte[] save_char_after_twist, byte charBeforeChange,
 					int j, int step_forward) {
 		/*
-		 * That's method called when we have new temporary upgrade and we need to save at the arrays the new values
+		 * this method is called when we have new temporary upgrade and we need to save the new values at the arrays 
 		 */
 				temp_save_old_char[number_of_changes]=charBeforeChange;
 				temp_index_of_upgrade_[number_of_changes]=j+step_forward;	
