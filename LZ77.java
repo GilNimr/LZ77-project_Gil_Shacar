@@ -88,7 +88,7 @@ public class LZ77 {
 
 		for (int i = 0; i < size-2; i++) {
 			probabilty = Math.random();
-			if ((probabilty > 0.3) || (error == false)) {
+			if ((probabilty > 0.05) || (error == false)) {
 				str.append('a');
 				error = true;
 			} else {
@@ -96,7 +96,7 @@ public class LZ77 {
 				error = false;
 			}
 			probabilty = Math.random();
-			if ((probabilty > 0.3) || (error == false)) {
+			if ((probabilty > 0.05) || (error == false)) {
 				str.append('b');
 				error = true;
 			} else {
